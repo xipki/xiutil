@@ -5,6 +5,7 @@ package test;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.xipki.asn1.x509.Certificate;
 import org.xipki.codec.asn1.AbstractCollection;
 import org.xipki.codec.asn1.Asn1Encodable;
 import org.xipki.codec.asn1.Asn1Primitive;
@@ -14,7 +15,6 @@ import org.xipki.codec.asn1.DerivedOctetString;
 import org.xipki.codec.asn1.DerivedUtf8String;
 import org.xipki.codec.asn1.Enumerated;
 import org.xipki.codec.asn1.FlagsBitString;
-import org.xipki.pkix.asn1.x509.Certificate;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -27,10 +27,10 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Every {@link Asn1Encodable} of pkix-asn1, except those extending {@code Derived*},
+ * Every {@link Asn1Encodable} of asn1, except those extending {@code Derived*},
  * {@link AbstractCollection}, {@link Asn1Primitive}, {@link Enumerated} and
  * {@link FlagsBitString}, must implement {@code toString(StringBuilder, int)}, or inherit it
- * from a class of pkix-asn1.
+ * from a class of asn1.
  *
  * @author Lijun Liao (xipki)
  */
@@ -91,7 +91,7 @@ public class ToStringCoverageTest {
   private static List<String> classNames(CodeSource codeSource)
       throws IOException, URISyntaxException {
     Path root = Paths.get(codeSource.getLocation().toURI());
-    Assert.assertTrue("pkix-asn1 classes must be a directory: " + root, Files.isDirectory(root));
+    Assert.assertTrue("asn1 classes must be a directory: " + root, Files.isDirectory(root));
 
     List<String> names = new ArrayList<>();
     try (Stream<Path> paths = Files.walk(root)) {

@@ -4,9 +4,9 @@
 package test;
 
 import org.junit.Assert;
+import org.xipki.asn1.x509.Certificate;
 import org.xipki.codec.asn1.Asn1Encodable;
 import org.xipki.codec.asn1.Asn1Primitive;
-import org.xipki.pkix.asn1.x509.Certificate;
 
 /**
  * Checks of {@link Asn1Encodable#toString()}.
@@ -35,7 +35,7 @@ class ToStringAssert {
 
     Assert.assertFalse(name + ": empty toString()", text.trim().isEmpty());
 
-    // only the classes of pkix-asn1 and of org.xipki.codec.asn1.crypto (codec)
+    // only the classes of asn1 and of org.xipki.codec.asn1.crypto (codec)
     // are checked, no ASN.1 primitives.
     boolean inScope = Certificate.class.getProtectionDomain().getCodeSource()
         .equals(obj.getClass().getProtectionDomain().getCodeSource())

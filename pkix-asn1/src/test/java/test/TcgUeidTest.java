@@ -5,8 +5,8 @@ package test;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.xipki.asn1.x509.Extension;
 import org.xipki.codec.asn1.Asn1Sequence;
-import org.xipki.pkix.asn1.x509.Extension;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.Hex;
 
