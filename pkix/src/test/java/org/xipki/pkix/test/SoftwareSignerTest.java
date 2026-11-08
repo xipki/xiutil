@@ -52,7 +52,7 @@ public class SoftwareSignerTest {
     mac.init(new SecretKeySpec(keyValue, "HmacSHA256"));
     byte[] expected = mac.doFinal(DATA);
 
-    ContentSigner contentSigner = signer.x509Signer();
+    ContentSigner contentSigner = signer.contentSigner();
     Assert.assertArrayEquals(expected, contentSigner.atomicSign(DATA));
     Assert.assertArrayEquals(expected, signer.x509Sign(DATA));
     for (int i = 0; i < 2; i++) {
@@ -73,7 +73,7 @@ public class SoftwareSignerTest {
     mac.init(new SecretKeySpec(macKey, "HmacSHA256"));
     byte[] expected = new KemHmacSignature("key-1", mac.doFinal(DATA)).getEncoded();
 
-    ContentSigner contentSigner = signer.x509Signer();
+    ContentSigner contentSigner = signer.contentSigner();
     Assert.assertArrayEquals(expected, contentSigner.atomicSign(DATA));
     for (int i = 0; i < 2; i++) {
       contentSigner.getOutputStream().write(DATA);
@@ -96,7 +96,7 @@ public class SoftwareSignerTest {
 
     byte[] macKey = KemUtil.mlkemDecryptSecret(kp.getPrivate(), encapKey.encapulation());
     ContentSigner signer = new KemHmacSigner(encapKey.id(),
-        new SecretKeySpec(macKey, "HMAC-SHA256")).x509Signer();
+        new SecretKeySpec(macKey, "HMAC-SHA256")).contentSigner();
 
     ContentVerifierProvider cvp =
         X509KeyUtil.getContentVerifierProvider(kp.getPublic(), null, masterKey.secretKey());
@@ -126,7 +126,7 @@ public class SoftwareSignerTest {
         kp.getPrivate(), null);
     assertAlgId(algo, signer);
 
-    ContentSigner[] contentSigners = {signer.x509Signer(),
+    ContentSigner[] contentSigners = {signer.contentSigner(),
         SignatureSigner.newContentSigner(algo, kp.getPrivate())};
     for (ContentSigner contentSigner : contentSigners) {
       Assert.assertTrue("atomic", verify(jdkName, kp, DATA, contentSigner.atomicSign(DATA)));
@@ -156,7 +156,7 @@ public class SoftwareSignerTest {
     Assert.assertArrayEquals(algo.algorithmIdentifier().getEncoded(),
         signer.getEncodedX509AlgId());
     Assert.assertEquals(algo.algorithmIdentifier(),
-        signer.x509Signer().getAlgorithmIdentifier());
+        signer.contentSigner().getAlgorithmIdentifier());
   }
 
 }

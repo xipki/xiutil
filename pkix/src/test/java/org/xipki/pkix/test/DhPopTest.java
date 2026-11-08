@@ -56,7 +56,7 @@ public class DhPopTest {
     Certificate asn1Cert = new Certificate.V3CertBuilder(issuer, BigInteger.ONE,
         now, now.plus(1, ChronoUnit.DAYS), new X500Name("CN=DH POP " + keySpec),
         SubjectPublicKeyInfo.fromPublicKey(caDhKp.getPublic()))
-        .build(X509KeyUtil.getSigner(issuerKp.getPrivate(), issuerKp.getPublic()).x509Signer());
+        .build(X509KeyUtil.getSigner(issuerKp.getPrivate(), issuerKp.getPublic()).contentSigner());
     X509Cert caDhCert = new X509Cert(asn1Cert);
 
     // the requestor: MAC with the key agreed with the static DH key of the CA

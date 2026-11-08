@@ -77,7 +77,7 @@ public class AESGmacContentSigner implements Signer {
 
   private final int nonceOffset;
 
-  private final MyX509Signer x509Signer;
+  private final MyContentSigner contentSigner;
 
   public AESGmacContentSigner(SignAlgo signAlgo, SecretKey signingKey)
       throws XiSecurityException {
@@ -126,7 +126,7 @@ public class AESGmacContentSigner implements Signer {
       throw new XiSecurityException(ex);
     }
 
-    this.x509Signer = new MyX509Signer();
+    this.contentSigner = new MyContentSigner();
   } // method AESGmacContentSigner
 
   private void initCipher() {
@@ -139,8 +139,8 @@ public class AESGmacContentSigner implements Signer {
   }
 
   @Override
-  public ContentSigner x509Signer() {
-    return x509Signer;
+  public ContentSigner contentSigner() {
+    return contentSigner;
   }
 
   @Override
@@ -154,13 +154,18 @@ public class AESGmacContentSigner implements Signer {
     return nonce.clone();
   }
 
-  private class MyX509Signer implements ContentSigner {
+  private class MyContentSigner implements ContentSigner {
 
     final AESGmacOutputStream outputStream = new AESGmacOutputStream(cipher);
 
     @Override
     public AlgorithmIdentifier getAlgorithmIdentifier() {
       return AlgorithmIdentifier.build(signAlgo.oid(), new GCMParameters(nonce, tagByteLen));
+    }
+
+    @Override
+    public Integer getC509AlgorithmIdentifier() {
+      return null;
     }
 
     @Override

@@ -130,7 +130,7 @@ public class KemPopTest {
     }
 
     ContentSigner signer = new KemHmacSigner(encapKey.id(),
-        new SecretKeySpec(macKey, "HMAC-SHA256")).x509Signer();
+        new SecretKeySpec(macKey, "HMAC-SHA256")).contentSigner();
     byte[] signature = signer.atomicSign(DATA);
 
     // CA: verifies the POP

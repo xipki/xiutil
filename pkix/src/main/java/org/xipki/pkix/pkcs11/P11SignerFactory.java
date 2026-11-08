@@ -333,7 +333,7 @@ public class P11SignerFactory implements SignerFactory {
     }
 
     @Override
-    public ContentSigner x509Signer() {
+    public ContentSigner contentSigner() {
       return x509Signer;
     }
 
@@ -342,6 +342,11 @@ public class P11SignerFactory implements SignerFactory {
       @Override
       public final AlgorithmIdentifier getAlgorithmIdentifier() {
         return algoSuite.algId();
+      }
+
+      @Override
+      public final Integer getC509AlgorithmIdentifier() {
+        return algoSuite.c509AlgId();
       }
 
       @Override
@@ -356,14 +361,14 @@ public class P11SignerFactory implements SignerFactory {
         byte[] m_ = CompositeSigUtil.buildM_(algoSuite, context, digestValue);
 
         try {
-          pqcSigner .x509Signer().getOutputStream().write(m_);
-          tradSigner.x509Signer().getOutputStream().write(m_);
+          pqcSigner.contentSigner().getOutputStream().write(m_);
+          tradSigner.contentSigner().getOutputStream().write(m_);
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
 
-        byte[]  pqcSig =  pqcSigner.x509Signer().getSignature();
-        byte[] tradSig = tradSigner.x509Signer().getSignature();
+        byte[]  pqcSig =  pqcSigner.contentSigner().getSignature();
+        byte[] tradSig = tradSigner.contentSigner().getSignature();
         return XiArrays.concatenate(pqcSig, tradSig);
       }
 
@@ -371,8 +376,8 @@ public class P11SignerFactory implements SignerFactory {
       public byte[] atomicSign(byte[] toBeSignData) throws SignatureException {
         byte[] digestValue = algoSuite.ph().hash(toBeSignData);
         byte[] m_ = CompositeSigUtil.buildM_(algoSuite, context, digestValue);
-        byte[]  pqcSig =  pqcSigner.x509Signer().atomicSign(m_);
-        byte[] tradSig = tradSigner.x509Signer().atomicSign(m_);
+        byte[]  pqcSig =  pqcSigner.contentSigner().atomicSign(m_);
+        byte[] tradSig = tradSigner.contentSigner().atomicSign(m_);
         return XiArrays.concatenate(pqcSig, tradSig);
       }
 
@@ -453,8 +458,8 @@ public class P11SignerFactory implements SignerFactory {
     }
 
     @Override
-    public ContentSigner x509Signer() {
-      return kemHmacSigner.x509Signer();
+    public ContentSigner contentSigner() {
+      return kemHmacSigner.contentSigner();
     }
 
   }

@@ -18,13 +18,21 @@ public interface Signer {
 
   default byte[] x509Sign(byte[] data) throws XiSecurityException {
     try {
-      return x509Signer().atomicSign(data);
+      return contentSigner().atomicSign(data);
     } catch (SignatureException e) {
       throw new XiSecurityException(e);
     }
   }
 
-  ContentSigner x509Signer();
+  default byte[] c509Sign(byte[] data) throws XiSecurityException {
+    try {
+      return contentSigner().atomicC509Sign(data);
+    } catch (SignatureException e) {
+      throw new XiSecurityException(e);
+    }
+  }
+
+  ContentSigner contentSigner();
 
   /**
    * returns the encoded algorithm identifier.

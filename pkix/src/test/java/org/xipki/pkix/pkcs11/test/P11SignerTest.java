@@ -110,7 +110,7 @@ public class P11SignerTest {
       X509Cert cert = new X509Cert(new Certificate.V3CertBuilder(
           new X500Name("CN=issuer"), BigInteger.ONE, now, now.plus(1, ChronoUnit.DAYS),
           new X500Name("CN=SM2"), SubjectPublicKeyInfo.fromPublicKey(publicKey))
-          .build(X509KeyUtil.getSigner(issuerKp.getPrivate(), issuerKp.getPublic()).x509Signer()));
+          .build(X509KeyUtil.getSigner(issuerKp.getPrivate(), issuerKp.getPublic()).contentSigner()));
       signAndVerify(label, SignAlgo.SM2_SM3, new X509Cert[]{cert});
     } finally {
       slot.destroyObjectsByIdLabel(null, label);
@@ -172,7 +172,7 @@ public class P11SignerTest {
       // streaming, twice to check that the state is reset
       Signer signer = concurrentSigner.borrowSigner();
       try {
-        ContentSigner contentSigner = signer.x509Signer();
+        ContentSigner contentSigner = signer.contentSigner();
         for (int i = 0; i < 2; i++) {
           contentSigner.getOutputStream().write(DATA);
           Assert.assertArrayEquals("streaming " + i, expected, contentSigner.getSignature());
@@ -260,7 +260,7 @@ public class P11SignerTest {
     try {
       Assert.assertArrayEquals(algo.algorithmIdentifier().getEncoded(),
           signer.getEncodedX509AlgId());
-      ContentSigner contentSigner = signer.x509Signer();
+      ContentSigner contentSigner = signer.contentSigner();
       Assert.assertEquals(algo.algorithmIdentifier(), contentSigner.getAlgorithmIdentifier());
       for (int i = 0; i < 2; i++) {
         contentSigner.getOutputStream().write(DATA);
@@ -341,7 +341,7 @@ public class P11SignerTest {
     try {
       Assert.assertArrayEquals(algo.algorithmIdentifier().getEncoded(),
           signer.getEncodedX509AlgId());
-      ContentSigner contentSigner = signer.x509Signer();
+      ContentSigner contentSigner = signer.contentSigner();
       Assert.assertEquals(algo.algorithmIdentifier(), contentSigner.getAlgorithmIdentifier());
       for (int i = 0; i < 2; i++) {
         contentSigner.getOutputStream().write(DATA);

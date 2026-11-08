@@ -3,6 +3,7 @@
 
 package org.xipki.pkix.verify;
 
+import org.xipki.codec.c509.ConstSignatureAlgorithm;
 import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
 import org.xipki.codec.crypto.ContentVerifier;
@@ -30,22 +31,43 @@ public class CompositeMLDSAContentVerifierProvider implements ContentVerifierPro
 
     private final AlgorithmIdentifier algId;
 
+    private final Integer c509AlgId;
+
     private final DigestOutputStream os;
 
-    private MyContentVerifier(AlgorithmIdentifier algId) {
+    private MyContentVerifier(AlgorithmIdentifier algId) throws GenerationException {
       this.algId = algId;
       SignAlgo signAlgo;
       try {
         signAlgo = SignAlgo.ofAlgorithmIdentifier(algId);
       } catch (NoSuchAlgorithmException e) {
-        throw new RuntimeException("unknown algorithm " +
+        throw new GenerationException("unknown algorithm " +
             algId.getAlgorithm().getId() + ": " + e.getMessage(), e);
       }
 
       if (!signAlgo.isCompositeMLDSA()) {
-        throw new RuntimeException("algorithm " +
+        throw new GenerationException("algorithm " +
             algId.getAlgorithm().getId() + " is not composite MLDSA");
       }
+      this.c509AlgId = signAlgo.c509AlgorithmIdentifier();
+      this.os = new DigestOutputStream(signAlgo.compositeSigAlgoSuite().ph().createDigest());
+    }
+
+    private MyContentVerifier(int c509AlgId) throws GenerationException {
+      this.c509AlgId = c509AlgId;
+      SignAlgo signAlgo;
+      try {
+        signAlgo = SignAlgo.ofC509AlgorithmIdentifier(c509AlgId);
+      } catch (NoSuchAlgorithmException e) {
+        throw new GenerationException("unknown algorithm " +
+            ConstSignatureAlgorithm.getDesc(c509AlgId) + ": " + e.getMessage(), e);
+      }
+
+      if (!signAlgo.isCompositeMLDSA()) {
+        throw new GenerationException("algorithm " +
+            ConstSignatureAlgorithm.getDesc(c509AlgId) + " is not composite MLDSA");
+      }
+      this.algId = signAlgo.algorithmIdentifier();
       this.os = new DigestOutputStream(signAlgo.compositeSigAlgoSuite().ph().createDigest());
     }
 
@@ -72,6 +94,11 @@ public class CompositeMLDSAContentVerifierProvider implements ContentVerifierPro
       }
     }
 
+    @Override
+    public Integer getC509AlgorithmIdentifier() {
+      return c509AlgId;
+    }
+
   } // class EdDSAContentVerifier
 
   private final CompositeMLDSAPublicKey verifyKey;
@@ -96,6 +123,11 @@ public class CompositeMLDSAContentVerifierProvider implements ContentVerifierPro
   @Override
   public ContentVerifier get(AlgorithmIdentifier verifierAlgorithmIdentifier)
       throws GenerationException {
+    return new MyContentVerifier(verifierAlgorithmIdentifier);
+  }
+
+  @Override
+  public ContentVerifier getForC509(int verifierAlgorithmIdentifier) throws GenerationException {
     return new MyContentVerifier(verifierAlgorithmIdentifier);
   }
 

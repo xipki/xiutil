@@ -80,7 +80,7 @@ public class DfltConcurrentSigner implements ConcurrentSigner {
 
     this.mac = mac;
     this.algorithm = SignAlgo.ofAlgorithmIdentifier(
-        signers.get(0).x509Signer().getAlgorithmIdentifier());
+        signers.get(0).contentSigner().getAlgorithmIdentifier());
     this.signers = new ArrayBlockingQueue<>(signers.size());
     this.signers.addAll(signers);
 
@@ -190,7 +190,7 @@ public class DfltConcurrentSigner implements ConcurrentSigner {
     Signer signer = null;
     try {
       signer = borrowSigner();
-      ContentSigner x509Signer = signer.x509Signer();
+      ContentSigner x509Signer = signer.contentSigner();
       byte[] signature = x509Signer.atomicSign(new byte[]{1, 2, 3, 4});
       return signature != null && signature.length > 0;
     } catch (Exception ex) {
@@ -211,7 +211,7 @@ public class DfltConcurrentSigner implements ConcurrentSigner {
   public byte[] x509Sign(byte[] data) throws NoIdleSignerException, SignatureException {
     Signer signer = borrowSigner();
     try {
-      ContentSigner x509Signer = signer.x509Signer();
+      ContentSigner x509Signer = signer.contentSigner();
       return x509Signer.atomicSign(data);
     } finally {
       requiteSigner(signer);
@@ -224,7 +224,7 @@ public class DfltConcurrentSigner implements ConcurrentSigner {
     Signer signer = borrowSigner();
 
     try {
-      ContentSigner x509Signer = signer.x509Signer();
+      ContentSigner x509Signer = signer.contentSigner();
       for (int i = 0; i < data.length; i++) {
         signatures[i] = x509Signer.atomicSign(data[i]);
       }

@@ -5,17 +5,18 @@ package org.xipki.pkix.verify;
 
 import org.xipki.asn1.crmf.DhSigStatic;
 import org.xipki.codec.asn1.Asn1Oid;
+import org.xipki.codec.c509.ConstSignatureAlgorithm;
 import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.crypto.ContentVerifier;
 import org.xipki.codec.crypto.ContentVerifierProvider;
 import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.oid.XipkiOIDs;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.crypto.api.CryptoApi;
 import org.xipki.crypto.api.CryptoApiFactory;
 import org.xipki.crypto.core.HashAlgo;
+import org.xipki.crypto.core.SignAlgo;
 import org.xipki.pkix.cert.DHSigStaticKeyCertPair;
 import org.xipki.crypto.core.EcCurveEnum;
 
@@ -43,38 +44,42 @@ public class XDHContentVerifierProvider implements ContentVerifierProvider {
 
   private static class XDHContentVerifier implements ContentVerifier {
 
-    private class HmacOutputStream extends OutputStream {
+    private class MacOutputStream extends OutputStream {
 
       @Override
       public void write(int bb) throws IOException {
-        hmac.update((byte) bb);
+        mac.update((byte) bb);
       }
 
       @Override
       public void write(byte[] bytes) throws IOException {
-        hmac.update(bytes, 0, bytes.length);
+        mac.update(bytes, 0, bytes.length);
       }
 
       @Override
       public void write(byte[] bytes, int off, int len) throws IOException {
-        hmac.update(bytes, off, len);
+        mac.update(bytes, off, len);
       }
 
-    } // class HmacOutputStream
+    } // class MacOutputStream
 
     private final AlgorithmIdentifier algId;
 
-    private final HmacOutputStream outputStream;
+    private final Integer c509AlgId;
 
-    private final Mac hmac;
+    private final MacOutputStream outputStream;
+
+    private final Mac mac;
 
     private final SecretKey macKey;
 
-    private XDHContentVerifier(AlgorithmIdentifier algId, Mac hmac, SecretKey macKey) {
+    private XDHContentVerifier(AlgorithmIdentifier algId, Integer c509AlgId,
+                               Mac mac, SecretKey macKey) {
       this.algId = algId;
-      this.hmac = hmac;
+      this.c509AlgId = c509AlgId;
+      this.mac = mac;
       this.macKey = macKey;
-      this.outputStream = new HmacOutputStream();
+      this.outputStream = new MacOutputStream();
     }
 
     @Override
@@ -85,7 +90,7 @@ public class XDHContentVerifierProvider implements ContentVerifierProvider {
     @Override
     public OutputStream getOutputStream() {
       try {
-        hmac.init(macKey);
+        mac.init(macKey);
       } catch (InvalidKeyException ex) {
         throw new IllegalStateException("could not init MAC: " + ex.getMessage());
       }
@@ -100,7 +105,12 @@ public class XDHContentVerifierProvider implements ContentVerifierProvider {
       } catch (CodecException e) {
         return false;
       }
-      return MessageDigest.isEqual(expectedHashValue, hmac.doFinal());
+      return MessageDigest.isEqual(expectedHashValue, mac.doFinal());
+    }
+
+    @Override
+    public Integer getC509AlgorithmIdentifier() {
+      return c509AlgId;
     }
 
   } // class XDHContentVerifier
@@ -111,25 +121,25 @@ public class XDHContentVerifierProvider implements ContentVerifierProvider {
 
   private final String hmacAlgorithm;
 
-  private final Asn1Oid sigAlgOid;
+  private final SignAlgo sigAlg;
 
   public XDHContentVerifierProvider(PublicKey verifyKey, DHSigStaticKeyCertPair ownerKeyAndCert)
       throws InvalidKeyException {
     Args.notNull(ownerKeyAndCert, "ownerKeyAndCert");
 
     Args.notNull(verifyKey, "verifyKey");
-    // by the algorithm OID: PublicKey.getAlgorithm() is provider-specific (e.g. the JDK returns
-    // "XDH" for X25519 and X448)
+    // by the algorithm OID: PublicKey.getAlgorithm() is provider-specific
+    // (e.g. the JDK returns "XDH" for X25519 and X448)
     EcCurveEnum curveEnum = KeyInfoUtil.getCurve(verifyKey);
     String keyAlgName = (curveEnum == null) ? verifyKey.getAlgorithm() : curveEnum.name();
 
     HashAlgo hash;
     if (EcCurveEnum.X25519 == curveEnum) {
-      this.sigAlgOid = XipkiOIDs.id_alg_dhPop_x25519;
+      this.sigAlg = SignAlgo.DHPOP_X25519;
       this.hmacAlgorithm = "HMAC-SHA512";
       hash = HashAlgo.SHA512;
     } else if (EcCurveEnum.X448 == curveEnum) {
-      this.sigAlgOid = XipkiOIDs.id_alg_dhPop_x448;
+      this.sigAlg = SignAlgo.DHPOP_X25519;
       this.hmacAlgorithm = "HMAC-SHA512";
       hash = HashAlgo.SHA512;
     }  else {
@@ -175,11 +185,49 @@ public class XDHContentVerifierProvider implements ContentVerifierProvider {
   public ContentVerifier get(AlgorithmIdentifier verifierAlgorithmIdentifier)
       throws GenerationException {
     Asn1Oid oid = verifierAlgorithmIdentifier.getAlgorithm();
-    if (!this.sigAlgOid.equals(oid)) {
+    boolean matchOid = this.sigAlg.algorithmIdentifier() != null
+        && this.sigAlg.algorithmIdentifier().getAlgorithm().equals(oid);
+
+    if (!matchOid) {
       throw new GenerationException(
           "given public key is not suitable for the algorithm " + oid.getId());
     }
 
+    Integer c509AlgId = null;
+    try {
+      SignAlgo signAlgo = SignAlgo.ofAlgorithmIdentifier(verifierAlgorithmIdentifier);
+      c509AlgId = signAlgo.c509AlgorithmIdentifier();
+    } catch (NoSuchAlgorithmException e) {
+    }
+
+    return newVerifier(verifierAlgorithmIdentifier, c509AlgId);
+  }
+
+  @Override
+  public ContentVerifier getForC509(int verifierAlgorithmIdentifier) throws GenerationException {
+    boolean matchOid = false;
+    if (sigAlg.c509AlgorithmIdentifier() != null) {
+      matchOid = sigAlg.c509AlgorithmIdentifier() == verifierAlgorithmIdentifier;
+    }
+
+    if (!matchOid) {
+      throw new GenerationException(
+          "given public key is not suitable for the algorithm "
+              + ConstSignatureAlgorithm.getDesc(verifierAlgorithmIdentifier));
+    }
+
+    AlgorithmIdentifier x509AlgId = null;
+    try {
+      SignAlgo signAlgo = SignAlgo.ofC509AlgorithmIdentifier(verifierAlgorithmIdentifier);
+      x509AlgId = signAlgo.algorithmIdentifier();
+    } catch (NoSuchAlgorithmException e) {
+    }
+
+    return newVerifier(x509AlgId, verifierAlgorithmIdentifier);
+  }
+
+  private XDHContentVerifier newVerifier(AlgorithmIdentifier x509AlgId, Integer c509AlgId)
+      throws GenerationException {
     Mac hmac;
     try {
       hmac = cryptoApi.newMac(hmacAlgorithm);
@@ -187,7 +235,7 @@ public class XDHContentVerifierProvider implements ContentVerifierProvider {
       throw new GenerationException(ex.getMessage());
     }
 
-    return new XDHContentVerifier(verifierAlgorithmIdentifier, hmac, hmacKey);
+    return new XDHContentVerifier(x509AlgId, c509AlgId, hmac, hmacKey);
   }
 
 }

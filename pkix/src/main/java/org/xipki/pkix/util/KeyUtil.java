@@ -186,7 +186,7 @@ public class KeyUtil {
     certGenerator.addExtension(Extension.ofExtendedKeyUsage(false,
         new ExtendedKeyUsage(KeyPurposeOIDs.id_kp_clientAuth, KeyPurposeOIDs.id_kp_serverAuth)));
 
-    Certificate cert = certGenerator.build(signer.x509Signer());
+    Certificate cert = certGenerator.build(signer.contentSigner());
 
     Pkcs12KeyStore ks = new Pkcs12KeyStore();
     ks.load((byte[]) null, params.password());

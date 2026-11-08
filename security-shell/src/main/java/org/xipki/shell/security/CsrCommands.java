@@ -358,7 +358,7 @@ public class CsrCommands {
       }
 
       try {
-        return csrBuilder.build(signer0.x509Signer());
+        return csrBuilder.build(signer0.contentSigner());
       } catch (SignatureException ex) {
         throw new XiSecurityException(ex.getMessage(), ex);
       } finally {

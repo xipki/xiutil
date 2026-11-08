@@ -513,7 +513,7 @@ public class GenerateCerts {
       if (keyCertConf.issuerName == null) {
         Signer signer = X509KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic());
 
-        keyStoreAndCert = generateSelfSignedCertificate(certType, signer.x509Signer(),
+        keyStoreAndCert = generateSelfSignedCertificate(certType, signer.contentSigner(),
             keyPair.getPrivate(), subjectPublicKeyInfo, genParams, subject, validity);
       } else {
         KeyWithCert caKeyCertPair = caKeyAndCertPairMap.get(keyCertConf.issuerName);
@@ -522,7 +522,7 @@ public class GenerateCerts {
         }
         Signer signer =
             X509KeyUtil.getSigner(caKeyCertPair.key(), caKeyCertPair.cert().publicKey());
-        keyStoreAndCert = generateCertificate(certType, signer.x509Signer(), caKeyCertPair.cert(),
+        keyStoreAndCert = generateCertificate(certType, signer.contentSigner(), caKeyCertPair.cert(),
             keyPair.getPrivate(), subjectPublicKeyInfo, genParams, subject, validity);
       }
 
@@ -604,7 +604,7 @@ public class GenerateCerts {
         if (keyCertConf.issuerName() == null) {
           Signer signer = X509KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic(), true);
 
-          keyStoreAndCert = generateSelfSignedCertificate(certType, signer.x509Signer(),
+          keyStoreAndCert = generateSelfSignedCertificate(certType, signer.contentSigner(),
               keyPair.getPrivate(), subjectPublicKeyInfo, genParams, subject, validity);
         } else {
           KeyWithCert caKeyCertPair = caKeyAndCertPairMap.get(keyCertConf.issuerName());
@@ -613,7 +613,7 @@ public class GenerateCerts {
           }
           Signer signer = X509KeyUtil.getSigner(caKeyCertPair.key(),
               caKeyCertPair.cert().publicKey());
-          keyStoreAndCert = generateCertificate(certType, signer.x509Signer(), caKeyCertPair.cert(),
+          keyStoreAndCert = generateCertificate(certType, signer.contentSigner(), caKeyCertPair.cert(),
               keyPair.getPrivate(), subjectPublicKeyInfo, genParams, subject, validity);
         }
 

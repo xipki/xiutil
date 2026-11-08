@@ -48,8 +48,9 @@ public class P12XdhMacSignerBuilder {
 
     private final int hashLen;
 
-    private final ContentSigner x509Signer;
+    private final ContentSigner contentSigner;
 
+    // TODO: consider C509IssuerAndSerialNumber
     private XdhMacContentSigner(SignAlgo signAlgo, SecretKey signingKey,
                                 IssuerAndSerialNumber peerIssuerAndSerial)
         throws XiSecurityException {
@@ -59,12 +60,17 @@ public class P12XdhMacSignerBuilder {
       byte[] encodedSig = new DhSigStatic(peerIssuerAndSerial, new byte[hashLen]).getEncoded();
       this.prefix = Arrays.copyOfRange(encodedSig, 0, encodedSig.length - hashLen);
 
-      final ContentSigner superX509Signer = super.x509Signer();
+      final ContentSigner superX509Signer = super.contentSigner();
 
-      this.x509Signer = new ContentSigner() {
+      this.contentSigner = new ContentSigner() {
         @Override
         public AlgorithmIdentifier getAlgorithmIdentifier() {
           return superX509Signer.getAlgorithmIdentifier();
+        }
+
+        @Override
+        public Integer getC509AlgorithmIdentifier() {
+          return superX509Signer.getC509AlgorithmIdentifier();
         }
 
         @Override
@@ -106,8 +112,8 @@ public class P12XdhMacSignerBuilder {
     }
 
     @Override
-    public ContentSigner x509Signer() {
-      return this.x509Signer;
+    public ContentSigner contentSigner() {
+      return this.contentSigner;
     }
 
   } // class XdhMacContentSigner

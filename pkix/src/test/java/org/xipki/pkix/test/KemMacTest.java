@@ -89,7 +89,7 @@ public class KemMacTest {
 
       SecretKey macKey = new SecretKeySpec(secret, "AES");
       HmacSigner verifier = new HmacSigner(SignAlgo.HMAC_SHA256, macKey);
-      byte[] macValue = verifier.x509Signer().atomicSign(data);
+      byte[] macValue = verifier.contentSigner().atomicSign(data);
       boolean valid = Arrays.equals(rawSignature, macValue);
       Assert.assertTrue("signature invalid", valid);
     }

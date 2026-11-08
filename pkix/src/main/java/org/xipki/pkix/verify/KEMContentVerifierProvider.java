@@ -4,6 +4,7 @@
 package org.xipki.pkix.verify;
 
 import org.xipki.codec.asn1.Asn1Oid;
+import org.xipki.codec.c509.ConstSignatureAlgorithm;
 import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
 import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
@@ -36,23 +37,26 @@ public class KEMContentVerifierProvider implements ContentVerifierProvider {
 
   private class MyContentVerifier implements ContentVerifier {
 
-    private final AlgorithmIdentifier algId;
+    private final SignAlgo algorithm = SignAlgo.KEM_HMAC_SHA256;
 
     private final HmacSigner verifier;
 
-    private MyContentVerifier(AlgorithmIdentifier algId) throws XiSecurityException {
-      this.algId = algId;
-      this.verifier = new HmacSigner(SignAlgo.HMAC_SHA256, macKey);
+    private MyContentVerifier() throws GenerationException {
+      try {
+        this.verifier = new HmacSigner(SignAlgo.HMAC_SHA256, macKey);
+      } catch (XiSecurityException e) {
+        throw new GenerationException(e);
+      }
     }
 
     @Override
     public AlgorithmIdentifier getAlgorithmIdentifier() {
-      return algId;
+      return algorithm.algorithmIdentifier();
     }
 
     @Override
     public OutputStream getOutputStream() {
-      return verifier.x509Signer().getOutputStream();
+      return verifier.contentSigner().getOutputStream();
     }
 
     @Override
@@ -65,8 +69,13 @@ public class KEMContentVerifierProvider implements ContentVerifierProvider {
       }
 
       byte[] rawSignature = expectedSig.signature();
-      byte[] computedMacValue = verifier.x509Signer().getSignature();
+      byte[] computedMacValue = verifier.contentSigner().getSignature();
       return MessageDigest.isEqual(rawSignature, computedMacValue);
+    }
+
+    @Override
+    public Integer getC509AlgorithmIdentifier() {
+      return algorithm.c509AlgorithmIdentifier();
     }
 
   } // class MyContentVerifier
@@ -107,12 +116,17 @@ public class KEMContentVerifierProvider implements ContentVerifierProvider {
     if (!XipkiOIDs.id_alg_KEM_HMAC_SHA256.equals(oid)) {
       throw new GenerationException("unsupported verifierAlgorithmIdentifier " + oid.getId());
     }
+    return new MyContentVerifier();
+  }
 
-    try {
-      return new MyContentVerifier(verifierAlgorithmIdentifier);
-    } catch (XiSecurityException e) {
-      throw new GenerationException(e.getMessage());
+  @Override
+  public ContentVerifier getForC509(int verifierAlgorithmIdentifier) throws GenerationException {
+    if (ConstSignatureAlgorithm.SIG_KEM_GMAC_256 != verifierAlgorithmIdentifier) {
+      throw new GenerationException("unsupported verifierAlgorithmIdentifier "
+          + ConstSignatureAlgorithm.getDesc(verifierAlgorithmIdentifier));
     }
+
+    return new MyContentVerifier();
   }
 
 }

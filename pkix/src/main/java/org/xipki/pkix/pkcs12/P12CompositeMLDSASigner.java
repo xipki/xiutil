@@ -35,7 +35,7 @@ public class P12CompositeMLDSASigner implements Signer {
 
   private final Signer tradSigner;
 
-  private final MyX509Signer x509Signer;
+  private final MyContentSigner contentSigner;
 
   private final byte[] context;
 
@@ -51,13 +51,13 @@ public class P12CompositeMLDSASigner implements Signer {
 
     this.encodedX509AlgId = signAlgo.algorithmIdentifier().getEncoded();
     this.algoSuite = signAlgo.compositeSigAlgoSuite();
-    this.x509Signer = new MyX509Signer();
+    this.contentSigner = new MyContentSigner();
     this.os = new DigestOutputStream(algoSuite.ph().createDigest());
   }
 
   @Override
-  public ContentSigner x509Signer() {
-    return x509Signer;
+  public ContentSigner contentSigner() {
+    return contentSigner;
   }
 
   @Override
@@ -65,11 +65,16 @@ public class P12CompositeMLDSASigner implements Signer {
     return encodedX509AlgId.clone();
   }
 
-  private class MyX509Signer implements ContentSigner {
+  private class MyContentSigner implements ContentSigner {
 
     @Override
     public AlgorithmIdentifier getAlgorithmIdentifier() {
       return signAlgo.algorithmIdentifier();
+    }
+
+    @Override
+    public Integer getC509AlgorithmIdentifier() {
+      return signAlgo.c509AlgorithmIdentifier();
     }
 
     @Override
@@ -83,8 +88,8 @@ public class P12CompositeMLDSASigner implements Signer {
       byte[] digestValue = os.digest();
       byte[] m_ = CompositeSigUtil.buildM_(algoSuite, context, digestValue);
 
-      byte[]  pqcSig =  pqcSigner.x509Signer().atomicSign(m_);
-      byte[] tradSig = tradSigner.x509Signer().atomicSign(m_);
+      byte[]  pqcSig =  pqcSigner.contentSigner().atomicSign(m_);
+      byte[] tradSig = tradSigner.contentSigner().atomicSign(m_);
       return XiArrays.concatenate(pqcSig, tradSig);
     }
   }

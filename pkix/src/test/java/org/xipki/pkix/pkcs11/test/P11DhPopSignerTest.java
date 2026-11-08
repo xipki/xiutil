@@ -90,7 +90,7 @@ public class P11DhPopSignerTest {
         new X500Name("CN=DH POP issuer"), BigInteger.ONE, now, now.plus(1, ChronoUnit.DAYS),
         new X500Name("CN=DH POP " + keySpec),
         SubjectPublicKeyInfo.fromPublicKey(caDhKp.getPublic()))
-        .build(KeyUtil.getSigner(issuerKp.getPrivate(), issuerKp.getPublic()).x509Signer()));
+        .build(KeyUtil.getSigner(issuerKp.getPrivate(), issuerKp.getPublic()).contentSigner()));
 
     // the requestor: the key in the token
     P11Module module = p11Factory.getP11Module(MODULE);

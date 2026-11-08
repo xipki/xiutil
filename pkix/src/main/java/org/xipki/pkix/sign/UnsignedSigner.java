@@ -6,6 +6,7 @@ package org.xipki.pkix.sign;
 import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
 import org.xipki.codec.asn1.oid.AlgorithmOIDs;
 import org.xipki.codec.Hex;
+import org.xipki.codec.c509.ConstSignatureAlgorithm;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.crypto.NopOutputStream;
 
@@ -37,6 +38,11 @@ public class UnsignedSigner implements Signer {
       }
 
       @Override
+      public Integer getC509AlgorithmIdentifier() {
+        return ConstSignatureAlgorithm.unsigned;
+      }
+
+      @Override
       public OutputStream getOutputStream() {
         return NopOutputStream.INSTANCE;
       }
@@ -55,7 +61,7 @@ public class UnsignedSigner implements Signer {
   }
 
   @Override
-  public ContentSigner x509Signer() {
+  public ContentSigner contentSigner() {
     return x509Signer;
   }
 

@@ -6,6 +6,7 @@ package org.xipki.pkix.verify;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xipki.asn1.x509.Certificate;
+import org.xipki.codec.c509.ConstSignatureAlgorithm;
 import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
 import org.xipki.codec.crypto.ContentVerifier;
@@ -37,29 +38,21 @@ public class SignatureContentVerifierProvider implements ContentVerifierProvider
 
   private static class MyContentVerifier implements ContentVerifier {
 
-    private final String algorithm;
-
-    private final AlgorithmIdentifier algId;
+    private final SignAlgo algorithm;
 
     private final ByteArrayOutputStream outstream;
 
     private final PublicKey verifyKey;
 
-    private MyContentVerifier(AlgorithmIdentifier algId, PublicKey verifyKey) {
-      this.algId = algId;
-      try {
-        this.algorithm = SignAlgo.ofAlgorithmIdentifier(algId).jceName();
-      } catch (NoSuchAlgorithmException e) {
-        throw new RuntimeException("unknown algorithm " +
-            algId.getAlgorithm().getId() + ": " + e.getMessage(), e);
-      }
+    private MyContentVerifier(SignAlgo algorithm, PublicKey verifyKey) {
+      this.algorithm = algorithm;
       this.outstream = new ByteArrayOutputStream();
       this.verifyKey = verifyKey;
     }
 
     @Override
     public AlgorithmIdentifier getAlgorithmIdentifier() {
-      return algId;
+      return algorithm.algorithmIdentifier();
     }
 
     @Override
@@ -76,7 +69,7 @@ public class SignatureContentVerifierProvider implements ContentVerifierProvider
     @Override
     public boolean atomicVerify(byte[] toBeSignData, byte[] signature) throws SignatureException {
       try {
-        Signature sig = cryptoApi.newSignature(algorithm);
+        Signature sig = cryptoApi.newSignature(algorithm.jceName());
         sig.initVerify(verifyKey);
         sig.update(toBeSignData);
         return sig.verify(signature);
@@ -87,6 +80,11 @@ public class SignatureContentVerifierProvider implements ContentVerifierProvider
         LOG.warn("could not verify signature", ex);
         throw new RuntimeException(ex.getMessage());
       }
+    }
+
+    @Override
+    public Integer getC509AlgorithmIdentifier() {
+      return algorithm.c509AlgorithmIdentifier();
     }
 
   } // class EdDSAContentVerifier
@@ -122,7 +120,28 @@ public class SignatureContentVerifierProvider implements ContentVerifierProvider
   @Override
   public ContentVerifier get(AlgorithmIdentifier verifierAlgorithmIdentifier)
       throws GenerationException {
-    return new MyContentVerifier(verifierAlgorithmIdentifier, verifyKey);
+    SignAlgo signAlgo;
+    try {
+      signAlgo = SignAlgo.ofAlgorithmIdentifier(verifierAlgorithmIdentifier);
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("unknown algorithm " +
+          verifierAlgorithmIdentifier.getAlgorithm().getId() + ": " + e.getMessage(), e);
+    }
+
+    return new MyContentVerifier(signAlgo, verifyKey);
+  }
+
+  @Override
+  public ContentVerifier getForC509(int verifierAlgorithmIdentifier) throws GenerationException {
+    SignAlgo signAlgo;
+    try {
+      signAlgo = SignAlgo.ofC509AlgorithmIdentifier(verifierAlgorithmIdentifier);
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("unknown algorithm " +
+          ConstSignatureAlgorithm.getDesc(verifierAlgorithmIdentifier) + ": " + e.getMessage(), e);
+    }
+
+    return new MyContentVerifier(signAlgo, verifyKey);
   }
 
 }

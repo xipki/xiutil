@@ -37,7 +37,7 @@ public class HmacSigner implements Signer {
 
   private final Mac hmac;
 
-  private final MyX509Signer x509Signer;
+  private final MyContentSigner contentSigner;
 
   public HmacSigner(SignAlgo algorithm, SecretKey signingKey) throws XiSecurityException {
     this.algorithm = Args.notNull(algorithm, "algorithm");
@@ -53,7 +53,7 @@ public class HmacSigner implements Signer {
     } catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidKeyException ex) {
       throw new XiSecurityException("could not initialize HMAC", ex);
     }
-    this.x509Signer = new MyX509Signer();
+    this.contentSigner = new MyContentSigner();
   }
 
   public SignAlgo getAlgorithm() {
@@ -61,8 +61,8 @@ public class HmacSigner implements Signer {
   }
 
   @Override
-  public ContentSigner x509Signer() {
-    return x509Signer;
+  public ContentSigner contentSigner() {
+    return contentSigner;
   }
 
   @Override
@@ -70,11 +70,16 @@ public class HmacSigner implements Signer {
     return Arrays.copyOf(encodedX509AlgId, encodedX509AlgId.length);
   }
 
-  private final class MyX509Signer implements ContentSigner {
+  private final class MyContentSigner implements ContentSigner {
 
     @Override
     public AlgorithmIdentifier getAlgorithmIdentifier() {
       return algorithm.algorithmIdentifier();
+    }
+
+    @Override
+    public Integer getC509AlgorithmIdentifier() {
+      return algorithm.c509AlgorithmIdentifier();
     }
 
     @Override
