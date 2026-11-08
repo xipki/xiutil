@@ -25,16 +25,11 @@ import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.Hex;
 import org.xipki.crypto.api.CryptoApi;
 import org.xipki.crypto.api.CryptoApiFactory;
-import org.xipki.crypto.api.MldsaVariant;
-import org.xipki.crypto.api.MlkemVariant;
 import org.xipki.pkcs11.wrapper.Functions;
 import org.xipki.crypto.core.HashAlgo;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.SignAlgo;
-import org.xipki.crypto.core.composite.CompositeMLDSAPrivateKey;
 import org.xipki.crypto.core.composite.CompositeMLDSAPublicKey;
-import org.xipki.crypto.core.composite.CompositeMLKEMPrivateKey;
-import org.xipki.crypto.core.composite.CompositeMLKEMPublicKey;
 import org.xipki.crypto.core.XiSecurityException;
 import org.xipki.pkix.pkcs12.KeyPairWithSubjectPublicKeyInfo;
 import org.xipki.pkix.pkcs12.KeyStoreWrapper;
@@ -64,14 +59,12 @@ import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.security.spec.ECGenParameterSpec;
 import java.security.spec.ECParameterSpec;
 import java.security.spec.ECPoint;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -153,93 +146,7 @@ public class KeyUtil {
    */
   public static KeyPair generateKeyPair(KeySpec keySpec)
       throws NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException {
-    SecureRandom random = cryptoApi.getSecureRandom();
-    switch (keySpec) {
-      case RSA2048:
-      case RSA3072:
-      case RSA4096: {
-        KeyPairGenerator kpGen = getKeyPairGenerator("RSA");
-        Integer i = keySpec.RSAKeyBitSize();
-        assert i != null;
-        int keyBitSize = i;
-        kpGen.initialize(keyBitSize, random);
-        return kpGen.generateKeyPair();
-      }
-      case ED25519:
-      case ED448:
-      case X25519:
-      case X448: {
-        String algorithm = keySpec == KeySpec.ED25519 ? "ED25519"
-            : keySpec == KeySpec.ED448  ? "ED448"
-            : keySpec == KeySpec.X25519 ? "X25519" : "X448";
-
-        // 255 for Curve25519: accepted by both the JDK and BouncyCastle
-        int keyBitSize = keySpec == KeySpec.ED25519 ? 255
-            : keySpec == KeySpec.ED448  ? 448
-            : keySpec == KeySpec.X25519 ? 255 : 448;
-
-        KeyPairGenerator kpGen = getKeyPairGenerator(algorithm);
-        kpGen.initialize(keyBitSize, random);
-        return kpGen.generateKeyPair();
-      }
-      case MLDSA44:
-      case MLDSA65:
-      case MLDSA87: {
-        MldsaVariant spec =
-              (keySpec == KeySpec.MLDSA44)  ? MldsaVariant.ml_dsa_44
-            : (keySpec == KeySpec.MLDSA65)  ? MldsaVariant.ml_dsa_65
-            : MldsaVariant.ml_dsa_87;
-        return cryptoApi.generateKeyPair(spec);
-      }
-      case MLKEM512:
-      case MLKEM768:
-      case MLKEM1024: {
-        MlkemVariant spec =
-              (keySpec == KeySpec.MLKEM512) ? MlkemVariant.ml_kem_512
-            : (keySpec == KeySpec.MLKEM768) ? MlkemVariant.ml_kem_768
-            : MlkemVariant.ml_kem_1024;
-        return cryptoApi.generateKeyPair(spec);
-      }
-      case P256:
-      case P384:
-      case P521:
-      case BRAINPOOLP256R1:
-      case BRAINPOOLP384R1:
-      case BRAINPOOLP512R1:
-      case SM2: {
-        EcCurveEnum curve = keySpec.ecCurve();
-        assert curve != null;
-        ECGenParameterSpec spec = new ECGenParameterSpec(curve.oid().getId());
-        KeyPairGenerator kpGen = getKeyPairGenerator("EC");
-        kpGen.initialize(spec, random);
-        return kpGen.generateKeyPair();
-      }
-    }
-
-    if (keySpec.isCompositeMLDSA()) {
-      KeyPair pqcKeyPair = generateKeyPair(keySpec.compositePqcVariant());
-      KeyPair tradKeyPair = generateKeyPair(keySpec.compositeTradVariant());
-      CompositeMLDSAPrivateKey sk;
-      try {
-        sk = new CompositeMLDSAPrivateKey(pqcKeyPair.getPrivate(), tradKeyPair.getPrivate());
-      } catch (CodecException e) {
-        throw new InvalidAlgorithmParameterException(e);
-      }
-
-      CompositeMLDSAPublicKey pk = new CompositeMLDSAPublicKey(
-          pqcKeyPair.getPublic(), tradKeyPair.getPublic());
-      return new KeyPair(pk, sk);
-    } else if (keySpec.isCompositeMLKEM()) {
-      KeyPair pqcKeyPair = generateKeyPair(keySpec.compositePqcVariant());
-      KeyPair tradKeyPair = generateKeyPair(keySpec.compositeTradVariant());
-      CompositeMLKEMPrivateKey sk = new CompositeMLKEMPrivateKey(
-          pqcKeyPair.getPrivate(), tradKeyPair.getPrivate());
-      CompositeMLKEMPublicKey pk = new CompositeMLKEMPublicKey(
-          pqcKeyPair.getPublic(), tradKeyPair.getPublic());
-      return new KeyPair(pk, sk);
-    }
-
-    throw new IllegalStateException("unknown keyspec " + keySpec);
+    return KeyInfoUtil.generateKeyPair(keySpec);
   }
 
   public static KeyPairWithSubjectPublicKeyInfo generateKeyPair2(KeySpec keySpec)
@@ -322,16 +229,6 @@ public class KeyUtil {
     result.setKeystoreObject(ks);
     return result;
   }
-
-  private static KeyPairGenerator getKeyPairGenerator(String algorithm)
-      throws NoSuchAlgorithmException, NoSuchProviderException {
-    String upperAlg = algorithm.toUpperCase(Locale.ROOT);
-    if ("ECDSA".equals(upperAlg)) {
-      algorithm = "EC";
-    }
-
-    return cryptoApi.newKeyPairGenerator(algorithm);
-  } // method getKeyPairGenerator
 
   public static RSAPublicKey getRSAPublicKey(RSAPublicKeySpec keySpec)
       throws InvalidKeySpecException {

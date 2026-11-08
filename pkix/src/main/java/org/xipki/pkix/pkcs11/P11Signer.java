@@ -461,7 +461,7 @@ abstract class P11Signer implements Signer {
       this.mechanism = Optional.ofNullable(algoMechMap.get(signAlgo))
           .orElseThrow(() -> new XiSecurityException("Unsupported MAC algorithm " + signAlgo));
 
-      if (identity.supportsSign(mechanism)) {
+      if (!identity.supportsSign(mechanism)) {
         throw new XiSecurityException("unsupported MAC algorithm " + signAlgo);
       }
 
