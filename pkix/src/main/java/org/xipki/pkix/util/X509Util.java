@@ -5,6 +5,11 @@ package org.xipki.pkix.util;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xipki.asn1.pkcs10.CertificationRequest;
+import org.xipki.asn1.spdm.DmtfDeviceInfo;
+import org.xipki.asn1.x500.AttributeTypeAndValue;
+import org.xipki.asn1.x500.RDN;
+import org.xipki.asn1.x500.X500Name;
 import org.xipki.codec.asn1.*;
 import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
 import org.xipki.codec.asn1.oid.AttributeOIDs;
@@ -13,33 +18,27 @@ import org.xipki.codec.asn1.oid.SpdmOIDs;
 import org.xipki.codec.asn1.oid.TcgOIDs;
 import org.xipki.codec.asn1.oid.X509OIDs;
 import org.xipki.codec.util.StringUtil;
-import org.xipki.pkix.asn1.pkcs10.CertificationRequest;
-import org.xipki.pkix.asn1.spdm.DmtfDeviceInfo;
-import org.xipki.pkix.asn1.x500.AttributeTypeAndValue;
-import org.xipki.pkix.asn1.x500.RDN;
-import org.xipki.pkix.asn1.x500.X500Name;
-import org.xipki.pkix.asn1.x509.*;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.Base64;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.Hex;
 import org.xipki.crypto.core.KeySpec;
-import org.xipki.pkix.exception.PkixException;
 import org.xipki.crypto.core.XiSecurityException;
 import org.xipki.crypto.core.pem.PemObject;
 import org.xipki.crypto.core.pem.PemReader;
+import org.xipki.asn1.x509.*;
 import org.xipki.pkix.cert.KeyUsage;
+import org.xipki.util.misc.PemEncoder;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.cert.X509Crl;
 import org.xipki.codec.ConfPairs;
 import org.xipki.codec.exception.InvalidConfException;
-import org.xipki.pkix.util.misc.CollectionUtil;
-import org.xipki.pkix.util.misc.CompareUtil;
-import org.xipki.pkix.util.misc.LogUtil;
-import org.xipki.pkix.util.misc.PemEncoder;
-import org.xipki.pkix.util.misc.PemEncoder.PemLabel;
-import org.xipki.pkix.util.conf.FileOrBinary;
 import org.xipki.codec.util.IoUtil;
+import org.xipki.util.exception.PkixException;
+import org.xipki.util.conf.FileOrBinary;
+import org.xipki.util.misc.CollectionUtil;
+import org.xipki.util.misc.CompareUtil;
+import org.xipki.util.misc.LogUtil;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -256,7 +255,7 @@ public class X509Util {
 
   public static String toPemCert(X509Cert cert) {
     return StringUtil.toUtf8String(PemEncoder.encode(
-        notNull(cert, "cert").getEncoded(), PemLabel.CERTIFICATE));
+        notNull(cert, "cert").getEncoded(), PemEncoder.PemLabel.CERTIFICATE));
   }
 
   public static X509Crl parseCrl(File file) throws IOException, CRLException {
@@ -336,17 +335,17 @@ public class X509Util {
     }
   }
 
-  public static org.xipki.pkix.asn1.x509.KeyUsage createKeyUsage(Set<KeyUsage> usages) {
+  public static org.xipki.asn1.x509.KeyUsage createKeyUsage(Set<KeyUsage> usages) {
     Args.notEmpty(usages, "usages");
 
-    org.xipki.pkix.asn1.x509.KeyUsage[] singleUsages =
-        new org.xipki.pkix.asn1.x509.KeyUsage[usages.size()];
+    org.xipki.asn1.x509.KeyUsage[] singleUsages =
+        new org.xipki.asn1.x509.KeyUsage[usages.size()];
     int i = 0;
     for (KeyUsage keyUsage : usages) {
       singleUsages[i++] = keyUsage.asn1();
     }
 
-    return new org.xipki.pkix.asn1.x509.KeyUsage(singleUsages);
+    return new org.xipki.asn1.x509.KeyUsage(singleUsages);
   }
 
   public static ExtendedKeyUsage createExtendedUsage(Collection<Asn1Oid> usages) {
@@ -462,7 +461,7 @@ public class X509Util {
 
     StringBuilder sb = new StringBuilder();
     for (byte[] bytes : certchain) {
-      sb.append(StringUtil.toUtf8String(PemEncoder.encode(bytes, PemLabel.CERTIFICATE)));
+      sb.append(StringUtil.toUtf8String(PemEncoder.encode(bytes, PemEncoder.PemLabel.CERTIFICATE)));
     }
     return sb.toString();
   }

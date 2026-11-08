@@ -8,7 +8,7 @@ import org.junit.Test;
 import org.xipki.crypto.core.HashAlgo;
 import org.xipki.crypto.core.XiSecurityException;
 import org.xipki.crypto.core.Pkcs1Util;
-import org.xipki.pkix.util.misc.RandomUtil;
+import org.xipki.util.misc.RandomUtil;
 
 /**
  * Test for {@link Pkcs1Util}.

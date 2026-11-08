@@ -5,7 +5,7 @@ package org.xipki.pkix.keycerts.test;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.xipki.pkix.asn1.x509.Certificate;
+import org.xipki.asn1.x509.Certificate;
 import org.xipki.pkix.util.X509Util;
 import org.xipki.codec.util.IoUtil;
 

@@ -3,8 +3,8 @@
 
 package org.xipki.pkix.auth;
 
+import org.xipki.asn1.x509.Certificate;
 import org.xipki.codec.util.StringUtil;
-import org.xipki.pkix.asn1.x509.Certificate;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.json.JsonList;
@@ -13,10 +13,10 @@ import org.xipki.codec.json.JsonParser;
 import org.xipki.crypto.core.XiSecurityException;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.util.X509Util;
-import org.xipki.pkix.util.conf.FileOrBinary;
-import org.xipki.pkix.util.io.XipkiIoUtil;
-import org.xipki.pkix.util.password.PasswordResolverException;
-import org.xipki.pkix.util.password.Passwords;
+import org.xipki.util.conf.FileOrBinary;
+import org.xipki.util.io.XipkiIoUtil;
+import org.xipki.util.password.PasswordResolverException;
+import org.xipki.util.password.Passwords;
 
 import java.io.File;
 import java.io.IOException;

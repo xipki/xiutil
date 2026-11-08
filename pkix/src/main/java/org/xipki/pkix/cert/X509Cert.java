@@ -3,14 +3,14 @@
 
 package org.xipki.pkix.cert;
 
+import org.xipki.asn1.x500.X500Name;
+import org.xipki.asn1.x509.BasicConstraints;
+import org.xipki.asn1.x509.Certificate;
+import org.xipki.asn1.x509.Extension;
+import org.xipki.asn1.x509.GeneralNames;
 import org.xipki.codec.asn1.Asn1Oid;
 import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
 import org.xipki.codec.asn1.oid.ExtensionOIDs;
-import org.xipki.pkix.asn1.x500.X500Name;
-import org.xipki.pkix.asn1.x509.BasicConstraints;
-import org.xipki.pkix.asn1.x509.Certificate;
-import org.xipki.pkix.asn1.x509.Extension;
-import org.xipki.pkix.asn1.x509.GeneralNames;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
@@ -67,7 +67,7 @@ public class X509Cert {
 
   private final int basicConstraints;
 
-  private final org.xipki.pkix.asn1.x509.KeyUsage keyUsage;
+  private final org.xipki.asn1.x509.KeyUsage keyUsage;
 
   private final byte[] encoded;
 
@@ -183,7 +183,7 @@ public class X509Cert {
     return publicKey;
   }
 
-  public org.xipki.pkix.asn1.x509.KeyUsage keyUsage() {
+  public org.xipki.asn1.x509.KeyUsage keyUsage() {
     return keyUsage;
   }
 
@@ -252,7 +252,8 @@ public class X509Cert {
       return;
     }
 
-    SignAlgo signAlgo = Optional.ofNullable(SignAlgo.getInstance(cert.getSignatureAlgorithm()))
+    SignAlgo signAlgo = Optional.ofNullable(
+        SignAlgo.ofAlgorithmIdentifier(cert.getSignatureAlgorithm()))
         .orElseThrow(() -> new NoSuchAlgorithmException("could not detect SignAlgo"));
     Signature signature = signAlgo.newSignature();
     checkBcSignature(key, signature);

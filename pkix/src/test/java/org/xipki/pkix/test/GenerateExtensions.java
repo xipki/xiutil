@@ -3,6 +3,33 @@
 
 package org.xipki.pkix.test;
 
+import org.xipki.asn1.ccc.EndpointCertificateExtensionSchema;
+import org.xipki.asn1.ccc.InstanceCACertificateExtensionSchema;
+import org.xipki.asn1.ccc.SBxDKisCertificateExtensionSchema;
+import org.xipki.asn1.cert.HardwareModuleName;
+import org.xipki.asn1.rpki.*;
+import org.xipki.asn1.spdm.DmtfDeviceInfo;
+import org.xipki.asn1.stir.TNAuthorizationList;
+import org.xipki.asn1.stir.TNEntry;
+import org.xipki.asn1.stir.TelephoneNumberRange;
+import org.xipki.asn1.tcg.*;
+import org.xipki.asn1.x500.DirectoryString;
+import org.xipki.asn1.x500.X500Name;
+import org.xipki.asn1.x509.Attribute;
+import org.xipki.asn1.x509.Extension;
+import org.xipki.asn1.x509.Extensions;
+import org.xipki.asn1.x509.GeneralName;
+import org.xipki.asn1.x509.GeneralNames;
+import org.xipki.asn1.x509.IssuerSerial;
+import org.xipki.asn1.x509.OtherName;
+import org.xipki.asn1.x509.SubjectDirectoryAttributes;
+import org.xipki.asn1.x509.qualified.BiometricData;
+import org.xipki.asn1.x509.qualified.BiometricSyntax;
+import org.xipki.asn1.x509.qualified.Iso4217CurrencyCode;
+import org.xipki.asn1.x509.qualified.MonetaryValue;
+import org.xipki.asn1.x509.qualified.QCStatement;
+import org.xipki.asn1.x509.qualified.QCStatements;
+import org.xipki.asn1.x509.qualified.TypeOfBiometricData;
 import org.xipki.codec.asn1.Asn1IA5String;
 import org.xipki.codec.asn1.Asn1OctetString;
 import org.xipki.codec.asn1.Asn1Oid;
@@ -10,38 +37,11 @@ import org.xipki.codec.asn1.Asn1PrintableString;
 import org.xipki.codec.asn1.Asn1Sequence;
 import org.xipki.codec.asn1.Asn1Utf8String;
 import org.xipki.codec.util.StringUtil;
-import org.xipki.pkix.asn1.ccc.EndpointCertificateExtensionSchema;
-import org.xipki.pkix.asn1.ccc.InstanceCACertificateExtensionSchema;
-import org.xipki.pkix.asn1.ccc.SBxDKisCertificateExtensionSchema;
-import org.xipki.pkix.asn1.cert.HardwareModuleName;
 import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
 import org.xipki.codec.asn1.oid.TcgOIDs;
-import org.xipki.pkix.asn1.rpki.*;
-import org.xipki.pkix.asn1.spdm.DmtfDeviceInfo;
-import org.xipki.pkix.asn1.stir.TNAuthorizationList;
-import org.xipki.pkix.asn1.stir.TNEntry;
-import org.xipki.pkix.asn1.stir.TelephoneNumberRange;
-import org.xipki.pkix.asn1.tcg.*;
-import org.xipki.pkix.asn1.x500.DirectoryString;
-import org.xipki.pkix.asn1.x500.X500Name;
-import org.xipki.pkix.asn1.x509.Attribute;
-import org.xipki.pkix.asn1.x509.Extension;
-import org.xipki.pkix.asn1.x509.Extensions;
-import org.xipki.pkix.asn1.x509.GeneralName;
-import org.xipki.pkix.asn1.x509.GeneralNames;
-import org.xipki.pkix.asn1.x509.IssuerSerial;
-import org.xipki.pkix.asn1.x509.OtherName;
-import org.xipki.pkix.asn1.x509.SubjectDirectoryAttributes;
-import org.xipki.pkix.asn1.x509.qualified.BiometricData;
-import org.xipki.pkix.asn1.x509.qualified.BiometricSyntax;
-import org.xipki.pkix.asn1.x509.qualified.Iso4217CurrencyCode;
-import org.xipki.pkix.asn1.x509.qualified.MonetaryValue;
-import org.xipki.pkix.asn1.x509.qualified.QCStatement;
-import org.xipki.pkix.asn1.x509.qualified.QCStatements;
-import org.xipki.pkix.asn1.x509.qualified.TypeOfBiometricData;
 import org.xipki.codec.exception.CodecException;
-import org.xipki.codec.ipadress.IPAddress;
 import org.xipki.codec.ipadress.IPAddressFamily;
+import org.xipki.codec.ipadress.Rfc3779IPAddress;
 import org.xipki.crypto.api.CryptoApi;
 import org.xipki.crypto.api.CryptoApiFactory;
 import org.xipki.crypto.core.HashAlgo;
@@ -210,14 +210,17 @@ public class GenerateExtensions {
       throws CodecException {
     if (addr.contains("-")) {
       String[] tokens = addr.split("-");
-      IPAddress min = IPAddress.getInstance(ipv4, tokens[0], IPAddress.Context.RANGE_MIN);
-      IPAddress max = IPAddress.getInstance(ipv4, tokens[1], IPAddress.Context.RANGE_MAX);
+      Rfc3779IPAddress min =
+          Rfc3779IPAddress.getInstance(ipv4, tokens[0], Rfc3779IPAddress.Context.RANGE_MIN);
+      Rfc3779IPAddress max =
+          Rfc3779IPAddress.getInstance(ipv4, tokens[1], Rfc3779IPAddress.Context.RANGE_MAX);
 
       return IPAddressOrRange.ofAddressRange(new IPAddressRange(
           new Asn1IPAddress(min.value(), min.unusedBits()),
           new Asn1IPAddress(max.value(), max.unusedBits())));
     } else {
-      IPAddress prefix = IPAddress.getInstance(ipv4, addr, IPAddress.Context.PREFIX);
+      Rfc3779IPAddress prefix =
+          Rfc3779IPAddress.getInstance(ipv4, addr, Rfc3779IPAddress.Context.PREFIX);
       return IPAddressOrRange.ofAddressPrefix(
           new Asn1IPAddress(prefix.value(), prefix.unusedBits()));
     }

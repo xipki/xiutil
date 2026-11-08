@@ -3,7 +3,7 @@
 
 package org.xipki.pkix.sign;
 
-import org.xipki.codec.asn1.GenerationException;
+import org.xipki.codec.exception.GenerationException;
 import org.xipki.pkix.SecurityFactory;
 import org.xipki.pkix.cert.X509Cert;
 

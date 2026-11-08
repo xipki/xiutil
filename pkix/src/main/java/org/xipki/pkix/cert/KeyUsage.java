@@ -12,21 +12,21 @@ import org.xipki.codec.util.Args;
  */
 public enum KeyUsage {
 
-  digitalSignature(org.xipki.pkix.asn1.x509.KeyUsage.digitalSignature),
-  contentCommitment(org.xipki.pkix.asn1.x509.KeyUsage.nonRepudiation, "nonRepudiation"),
-  keyEncipherment(org.xipki.pkix.asn1.x509.KeyUsage.keyEncipherment),
-  dataEncipherment(org.xipki.pkix.asn1.x509.KeyUsage.dataEncipherment),
-  keyAgreement(org.xipki.pkix.asn1.x509.KeyUsage.keyAgreement),
-  keyCertSign(org.xipki.pkix.asn1.x509.KeyUsage.keyCertSign),
-  cRLSign(org.xipki.pkix.asn1.x509.KeyUsage.cRLSign),
-  encipherOnly(org.xipki.pkix.asn1.x509.KeyUsage.encipherOnly),
-  decipherOnly(org.xipki.pkix.asn1.x509.KeyUsage.decipherOnly);
+  digitalSignature(org.xipki.asn1.x509.KeyUsage.digitalSignature),
+  contentCommitment(org.xipki.asn1.x509.KeyUsage.nonRepudiation, "nonRepudiation"),
+  keyEncipherment(org.xipki.asn1.x509.KeyUsage.keyEncipherment),
+  dataEncipherment(org.xipki.asn1.x509.KeyUsage.dataEncipherment),
+  keyAgreement(org.xipki.asn1.x509.KeyUsage.keyAgreement),
+  keyCertSign(org.xipki.asn1.x509.KeyUsage.keyCertSign),
+  cRLSign(org.xipki.asn1.x509.KeyUsage.cRLSign),
+  encipherOnly(org.xipki.asn1.x509.KeyUsage.encipherOnly),
+  decipherOnly(org.xipki.asn1.x509.KeyUsage.decipherOnly);
 
-  private final org.xipki.pkix.asn1.x509.KeyUsage asn1;
+  private final org.xipki.asn1.x509.KeyUsage asn1;
 
   private final String[] names;
 
-  KeyUsage(org.xipki.pkix.asn1.x509.KeyUsage asn1, String... aliases) {
+  KeyUsage(org.xipki.asn1.x509.KeyUsage asn1, String... aliases) {
     this.asn1 = asn1;
     int len = aliases == null ? 1 : 1 + aliases.length;
     this.names = new String[len];
@@ -36,7 +36,7 @@ public enum KeyUsage {
     }
   }
 
-  public org.xipki.pkix.asn1.x509.KeyUsage asn1() {
+  public org.xipki.asn1.x509.KeyUsage asn1() {
     return asn1;
   }
 

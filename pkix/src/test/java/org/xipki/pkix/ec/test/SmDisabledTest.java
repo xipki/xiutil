@@ -10,9 +10,9 @@ import org.junit.Test;
 import org.xipki.crypto.api.ECPoint;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.KeyInfoUtil;
-import org.xipki.pkix.util.KeyUtil;
 import org.xipki.crypto.core.WeierstraussCurveEnum;
-import org.xipki.pkix.util.misc.RandomUtil;
+import org.xipki.pkix.util.KeyUtil;
+import org.xipki.util.misc.RandomUtil;
 
 import java.math.BigInteger;
 import java.security.KeyPair;

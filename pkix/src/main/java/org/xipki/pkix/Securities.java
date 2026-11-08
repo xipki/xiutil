@@ -5,8 +5,8 @@ package org.xipki.pkix;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xipki.codec.asn1.GenerationException;
 import org.xipki.codec.exception.CodecException;
+import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.json.JsonMap;
 import org.xipki.codec.util.ReflectiveUtil;
 import org.xipki.pkix.pkcs11.P11CryptServiceFactory;
@@ -16,8 +16,8 @@ import org.xipki.pkix.pkcs12.P12SignerFactory;
 import org.xipki.pkix.sign.SignerFactory;
 import org.xipki.pkix.sign.SignerFactoryRegister;
 import org.xipki.codec.exception.InvalidConfException;
-import org.xipki.pkix.util.misc.CollectionUtil;
-import org.xipki.pkix.util.conf.FileOrValue;
+import org.xipki.util.conf.FileOrValue;
+import org.xipki.util.misc.CollectionUtil;
 
 import java.io.Closeable;
 import java.util.List;

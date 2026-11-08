@@ -15,7 +15,7 @@ import org.xipki.pkcs11.wrapper.TokenException;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.composite.CompositeKemSuite;
 import org.xipki.crypto.core.composite.CompositeSigSuite;
-import org.xipki.pkix.util.misc.LogUtil;
+import org.xipki.util.misc.LogUtil;
 
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;

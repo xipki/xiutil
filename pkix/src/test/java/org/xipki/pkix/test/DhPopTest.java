@@ -5,10 +5,10 @@ package org.xipki.pkix.test;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.xipki.asn1.x500.X500Name;
+import org.xipki.asn1.x509.Certificate;
 import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
 import org.xipki.codec.crypto.ContentVerifierProvider;
-import org.xipki.pkix.asn1.x500.X500Name;
-import org.xipki.pkix.asn1.x509.Certificate;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.SignAlgo;
 import org.xipki.pkix.pkcs12.P12XdhMacSignerBuilder;
@@ -16,6 +16,7 @@ import org.xipki.pkix.cert.DHSigStaticKeyCertPair;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.sign.ConcurrentSigner;
 import org.xipki.pkix.util.KeyUtil;
+import org.xipki.pkix.util.X509KeyUtil;
 import org.xipki.pkix.verify.XDHContentVerifierProvider;
 
 import java.math.BigInteger;
@@ -55,7 +56,7 @@ public class DhPopTest {
     Certificate asn1Cert = new Certificate.V3CertBuilder(issuer, BigInteger.ONE,
         now, now.plus(1, ChronoUnit.DAYS), new X500Name("CN=DH POP " + keySpec),
         SubjectPublicKeyInfo.fromPublicKey(caDhKp.getPublic()))
-        .build(KeyUtil.getSigner(issuerKp.getPrivate(), issuerKp.getPublic()).x509Signer());
+        .build(X509KeyUtil.getSigner(issuerKp.getPrivate(), issuerKp.getPublic()).x509Signer());
     X509Cert caDhCert = new X509Cert(asn1Cert);
 
     // the requestor: MAC with the key agreed with the static DH key of the CA
@@ -66,7 +67,7 @@ public class DhPopTest {
     byte[] signature = signer.x509Sign(DATA);
 
     // the CA: verifies the POP
-    ContentVerifierProvider cvp = KeyUtil.getContentVerifierProvider(kp.getPublic(),
+    ContentVerifierProvider cvp = X509KeyUtil.getContentVerifierProvider(kp.getPublic(),
         new DHSigStaticKeyCertPair(caDhKp.getPrivate(), caDhCert), null);
     Assert.assertTrue(keySpec + ": verifier " + cvp.getClass().getName(),
         cvp instanceof XDHContentVerifierProvider);

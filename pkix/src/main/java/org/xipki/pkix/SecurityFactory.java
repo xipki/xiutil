@@ -3,10 +3,10 @@
 
 package org.xipki.pkix;
 
-import org.xipki.codec.asn1.GenerationException;
+import org.xipki.asn1.pkcs10.CertificationRequest;
+import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
 import org.xipki.codec.crypto.ContentVerifierProvider;
-import org.xipki.pkix.asn1.pkcs10.CertificationRequest;
 import org.xipki.codec.util.Args;
 import org.xipki.pkix.cert.DHSigStaticKeyCertPair;
 import org.xipki.pkix.cert.X509Cert;

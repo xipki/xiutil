@@ -3,7 +3,7 @@
 
 package org.xipki.pkix.verify;
 
-import org.xipki.codec.asn1.GenerationException;
+import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
 import org.xipki.codec.crypto.ContentVerifier;
 import org.xipki.codec.crypto.ContentVerifierProvider;
@@ -36,7 +36,7 @@ public class CompositeMLDSAContentVerifierProvider implements ContentVerifierPro
       this.algId = algId;
       SignAlgo signAlgo;
       try {
-        signAlgo = SignAlgo.getInstance(algId);
+        signAlgo = SignAlgo.ofAlgorithmIdentifier(algId);
       } catch (NoSuchAlgorithmException e) {
         throw new RuntimeException("unknown algorithm " +
             algId.getAlgorithm().getId() + ": " + e.getMessage(), e);

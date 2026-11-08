@@ -21,7 +21,7 @@ import org.xipki.pkcs11.wrapper.spec.PKCS11SecretKeySpec;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.EcCurveEnum;
 import org.xipki.pkix.util.KeyUtil;
-import org.xipki.pkix.util.misc.LogUtil;
+import org.xipki.util.misc.LogUtil;
 
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;

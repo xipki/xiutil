@@ -15,10 +15,10 @@ import org.xipki.pkcs11.wrapper.Slot;
 import org.xipki.pkcs11.wrapper.TokenException;
 import org.xipki.pkcs11.wrapper.type.CkSlotInfo;
 import org.xipki.pkcs11.wrapper.type.CkTokenInfo;
-import org.xipki.pkix.util.misc.CollectionUtil;
-import org.xipki.pkix.util.misc.LogUtil;
-import org.xipki.pkix.util.io.XipkiIoUtil;
-import org.xipki.pkix.util.password.PasswordResolverException;
+import org.xipki.util.io.XipkiIoUtil;
+import org.xipki.util.misc.CollectionUtil;
+import org.xipki.util.misc.LogUtil;
+import org.xipki.util.password.PasswordResolverException;
 
 import java.util.ArrayList;
 import java.util.HashMap;

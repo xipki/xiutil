@@ -2,6 +2,16 @@
 // License Apache License 2.0
 package org.xipki.pkix.util;
 
+import org.xipki.asn1.x500.X500Name;
+import org.xipki.asn1.x509.AuthorityKeyIdentifier;
+import org.xipki.asn1.x509.BasicConstraints;
+import org.xipki.asn1.x509.Certificate;
+import org.xipki.asn1.x509.ExtendedKeyUsage;
+import org.xipki.asn1.x509.Extension;
+import org.xipki.asn1.x509.GeneralName;
+import org.xipki.asn1.x509.GeneralNames;
+import org.xipki.asn1.x509.KeyUsage;
+import org.xipki.asn1.x509.SubjectKeyIdentifier;
 import org.xipki.codec.asn1.Asn1Oid;
 import org.xipki.codec.asn1.crypto.PrivateKeyInfo;
 import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
@@ -9,19 +19,9 @@ import org.xipki.codec.asn1.oid.KeyPurposeOIDs;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.util.StringUtil;
 import org.xipki.crypto.core.KeyInfoUtil;
-import org.xipki.pkix.asn1.x500.X500Name;
-import org.xipki.pkix.asn1.x509.AuthorityKeyIdentifier;
-import org.xipki.pkix.asn1.x509.BasicConstraints;
-import org.xipki.pkix.asn1.x509.Certificate;
-import org.xipki.pkix.asn1.x509.ExtendedKeyUsage;
-import org.xipki.pkix.asn1.x509.Extension;
-import org.xipki.pkix.asn1.x509.GeneralName;
-import org.xipki.pkix.asn1.x509.GeneralNames;
-import org.xipki.pkix.asn1.x509.KeyUsage;
-import org.xipki.pkix.asn1.x509.SubjectKeyIdentifier;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
-import org.xipki.codec.ipadress.IPAddress;
+import org.xipki.codec.ipadress.IPAddressUtil;
 import org.xipki.codec.json.JsonList;
 import org.xipki.codec.json.JsonMap;
 import org.xipki.codec.json.JsonParser;
@@ -29,15 +29,15 @@ import org.xipki.crypto.core.HashAlgo;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.pem.PemObject;
 import org.xipki.crypto.core.pem.PemReader;
+import org.xipki.util.misc.PemEncoder;
 import org.xipki.pkix.pkcs12.KeyPairWithSubjectPublicKeyInfo;
 import org.xipki.pkix.pkcs12.KeystoreGenerationParameters;
 import org.xipki.pkix.pkcs12.Pkcs12KeyStore;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.sign.Signer;
 import org.xipki.codec.exception.InvalidConfException;
-import org.xipki.pkix.util.misc.PemEncoder;
-import org.xipki.pkix.util.misc.RandomUtil;
-import org.xipki.pkix.util.conf.Validity;
+import org.xipki.util.misc.RandomUtil;
+import org.xipki.util.conf.Validity;
 import org.xipki.codec.util.IoUtil;
 
 import javax.crypto.SecretKey;
@@ -497,7 +497,7 @@ public class GenerateCerts {
       System.out.println("Start generating key and certificates of " + name);
       KeySpec keySpec = KeySpec.ofKeySpec(keyCertConf.keyType);
 
-      KeyPairWithSubjectPublicKeyInfo keyPairInfo = KeyUtil.generateKeyPair2(keySpec);
+      KeyPairWithSubjectPublicKeyInfo keyPairInfo = X509KeyUtil.generateKeyPair2(keySpec);
       SubjectPublicKeyInfo subjectPublicKeyInfo = keyPairInfo.subjectPublicKeyInfo();
       KeyPair keyPair = keyPairInfo.keypair();
 
@@ -511,7 +511,7 @@ public class GenerateCerts {
       KeyStoreAndCert keyStoreAndCert;
 
       if (keyCertConf.issuerName == null) {
-        Signer signer = KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic());
+        Signer signer = X509KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic());
 
         keyStoreAndCert = generateSelfSignedCertificate(certType, signer.x509Signer(),
             keyPair.getPrivate(), subjectPublicKeyInfo, genParams, subject, validity);
@@ -520,7 +520,8 @@ public class GenerateCerts {
         if (caKeyCertPair == null) {
           throw new InvalidConfException("unknown CA " + keyCertConf.issuerName);
         }
-        Signer signer = KeyUtil.getSigner(caKeyCertPair.key(), caKeyCertPair.cert().publicKey());
+        Signer signer =
+            X509KeyUtil.getSigner(caKeyCertPair.key(), caKeyCertPair.cert().publicKey());
         keyStoreAndCert = generateCertificate(certType, signer.x509Signer(), caKeyCertPair.cert(),
             keyPair.getPrivate(), subjectPublicKeyInfo, genParams, subject, validity);
       }
@@ -589,7 +590,7 @@ public class GenerateCerts {
       for (SingleKeyCert entry : keyCertConf.entries) {
         KeySpec keySpec = KeySpec.ofKeySpec(entry.keyType);
 
-        KeyPairWithSubjectPublicKeyInfo keyPairInfo = KeyUtil.generateKeyPair2(keySpec);
+        KeyPairWithSubjectPublicKeyInfo keyPairInfo = X509KeyUtil.generateKeyPair2(keySpec);
 
         SubjectPublicKeyInfo subjectPublicKeyInfo = keyPairInfo.subjectPublicKeyInfo();
         KeyPair keyPair = keyPairInfo.keypair();
@@ -601,7 +602,7 @@ public class GenerateCerts {
         KeyStoreAndCert keyStoreAndCert;
 
         if (keyCertConf.issuerName() == null) {
-          Signer signer = KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic(), true);
+          Signer signer = X509KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic(), true);
 
           keyStoreAndCert = generateSelfSignedCertificate(certType, signer.x509Signer(),
               keyPair.getPrivate(), subjectPublicKeyInfo, genParams, subject, validity);
@@ -610,7 +611,7 @@ public class GenerateCerts {
           if (caKeyCertPair == null) {
             throw new InvalidConfException("unknown CA " + keyCertConf.issuerName());
           }
-          Signer signer = KeyUtil.getSigner(caKeyCertPair.key(),
+          Signer signer = X509KeyUtil.getSigner(caKeyCertPair.key(),
               caKeyCertPair.cert().publicKey());
           keyStoreAndCert = generateCertificate(certType, signer.x509Signer(), caKeyCertPair.cert(),
               keyPair.getPrivate(), subjectPublicKeyInfo, genParams, subject, validity);
@@ -628,7 +629,7 @@ public class GenerateCerts {
           Objects.requireNonNull(X509Util.encodeCertificates(thisCerts))
               .getBytes(StandardCharsets.UTF_8));
 
-      Pkcs12KeyStore ks = KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
+      Pkcs12KeyStore ks = X509KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
 
       for (int i = 0; i < size; i++) {
         ks.setKeyEntry(name + "-" + (i + 1),
@@ -671,7 +672,7 @@ public class GenerateCerts {
           continue;
         }
 
-        Pkcs12KeyStore certP12Ks = KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
+        Pkcs12KeyStore certP12Ks = X509KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
         certP12Ks.load((byte[]) null, null);
 
         List<X509Cert> certs = new ArrayList<>(certstore.keyCertNames.size());
@@ -764,7 +765,7 @@ public class GenerateCerts {
           throw new InvalidConfException("common name of a TLS certificate must not be null");
         }
 
-        GeneralName generalName = IPAddress.isValid(commonName)
+        GeneralName generalName = IPAddressUtil.isValid(commonName)
             ? GeneralName.ofTagName(GeneralName.tag_iPAddress, commonName)
             : GeneralName.ofTagName(GeneralName.tag_dNSName,   commonName);
 
@@ -782,7 +783,7 @@ public class GenerateCerts {
 
     KeyWithCert identity = new KeyWithCert(new X509Cert(certGenerator.build(signer)), privateKey);
 
-    Pkcs12KeyStore ks = KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
+    Pkcs12KeyStore ks = X509KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
     ks.setKeyEntry("main", PrivateKeyInfo.fromPrivateKey(privateKey), identity.cert().getCert());
 
     ByteArrayOutputStream ksStream = new ByteArrayOutputStream();

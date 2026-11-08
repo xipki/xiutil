@@ -15,9 +15,10 @@ import org.xipki.crypto.core.KemEncapKey;
 import org.xipki.crypto.core.KemEncapsulation;
 import org.xipki.pkix.sign.KemHmacSigner;
 import org.xipki.pkix.util.KeyUtil;
+import org.xipki.pkix.util.X509KeyUtil;
 import org.xipki.crypto.core.SecretKeyWithAlias;
 import org.xipki.pkix.verify.KEMContentVerifierProvider;
-import org.xipki.pkix.util.misc.RandomUtil;
+import org.xipki.util.misc.RandomUtil;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -98,7 +99,7 @@ public class KemPopTest {
     for (KeySpec keySpec : new KeySpec[]{KeySpec.X25519, KeySpec.X448}) {
       KeyPair kp = KeyUtil.generateKeyPair(keySpec);
       try {
-        KeyUtil.getContentVerifierProvider(kp.getPublic(), null, null);
+        X509KeyUtil.getContentVerifierProvider(kp.getPublic(), null, null);
         Assert.fail(keySpec + ": InvalidKeyException expected");
       } catch (InvalidKeyException e) {
         Assert.assertTrue(keySpec + ": " + e.getMessage(),
@@ -134,7 +135,7 @@ public class KemPopTest {
 
     // CA: verifies the POP
     ContentVerifierProvider cvp =
-        KeyUtil.getContentVerifierProvider(kp.getPublic(), null, masterKey.secretKey());
+        X509KeyUtil.getContentVerifierProvider(kp.getPublic(), null, masterKey.secretKey());
     Assert.assertTrue(keySpec + ": verifier " + cvp.getClass().getName(),
         cvp instanceof KEMContentVerifierProvider);
 

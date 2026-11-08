@@ -15,10 +15,10 @@ import org.xipki.pkix.util.KeyUtil;
 import org.xipki.crypto.core.SecretKeyWithAlias;
 import org.xipki.pkix.util.X509Util;
 import org.xipki.codec.exception.InvalidConfException;
-import org.xipki.pkix.util.conf.KeystoreConf;
-import org.xipki.pkix.util.conf.FileOrValue;
-import org.xipki.pkix.util.password.PasswordResolverException;
-import org.xipki.pkix.util.password.Passwords;
+import org.xipki.util.conf.FileOrValue;
+import org.xipki.util.conf.KeystoreConf;
+import org.xipki.util.password.PasswordResolverException;
+import org.xipki.util.password.Passwords;
 
 import javax.crypto.SecretKey;
 import java.io.ByteArrayInputStream;

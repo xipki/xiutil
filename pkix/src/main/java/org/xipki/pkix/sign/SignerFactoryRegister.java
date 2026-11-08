@@ -5,7 +5,7 @@ package org.xipki.pkix.sign;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xipki.codec.asn1.GenerationException;
+import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.util.Args;
 import org.xipki.pkix.SecurityFactory;
 import org.xipki.pkix.cert.X509Cert;

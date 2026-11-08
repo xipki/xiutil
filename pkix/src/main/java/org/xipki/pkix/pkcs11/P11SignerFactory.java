@@ -3,11 +3,11 @@
 
 package org.xipki.pkix.pkcs11;
 
-import org.xipki.codec.asn1.GenerationException;
 import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
 import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.crypto.DigestOutputStream;
+import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.util.StringUtil;
 import org.xipki.codec.util.XiArrays;
 import org.xipki.crypto.core.KeyInfoUtil;

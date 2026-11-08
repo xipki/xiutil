@@ -3,7 +3,7 @@
 
 package org.xipki.pkix.cert;
 
-import org.xipki.pkix.asn1.x509.CRLReason;
+import org.xipki.asn1.x509.CRLReason;
 import org.xipki.codec.util.Args;
 
 import java.util.HashMap;

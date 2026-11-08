@@ -29,7 +29,7 @@ public class SignAlgos {
   public static SignAlgo getInstance(Key key, SignerConf signerConf)
       throws NoSuchAlgorithmException {
     if (signerConf == null) {
-      return SignAlgo.getInstance(key);
+      return SignAlgo.ofKey(key);
     }
 
     try {

@@ -11,9 +11,9 @@ import org.xipki.pkcs11.wrapper.Category;
 import org.xipki.pkcs11.wrapper.PKCS11Module;
 import org.xipki.pkcs11.wrapper.PKCS11T;
 import org.xipki.codec.exception.InvalidConfException;
-import org.xipki.pkix.util.misc.CollectionUtil;
-import org.xipki.pkix.util.password.PasswordResolverException;
-import org.xipki.pkix.util.password.Passwords;
+import org.xipki.util.misc.CollectionUtil;
+import org.xipki.util.password.PasswordResolverException;
+import org.xipki.util.password.Passwords;
 
 import java.util.ArrayList;
 import java.util.Collection;

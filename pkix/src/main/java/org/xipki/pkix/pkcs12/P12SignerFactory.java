@@ -3,7 +3,7 @@
 
 package org.xipki.pkix.pkcs12;
 
-import org.xipki.codec.asn1.GenerationException;
+import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
 import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
 import org.xipki.codec.Base64;
@@ -20,9 +20,9 @@ import org.xipki.pkix.sign.SignerConf;
 import org.xipki.pkix.sign.SignerFactory;
 import org.xipki.crypto.core.EcCurveEnum;
 import org.xipki.codec.exception.InvalidConfException;
-import org.xipki.pkix.util.io.XipkiIoUtil;
-import org.xipki.pkix.util.password.PasswordResolverException;
-import org.xipki.pkix.util.password.Passwords;
+import org.xipki.util.io.XipkiIoUtil;
+import org.xipki.util.password.PasswordResolverException;
+import org.xipki.util.password.Passwords;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

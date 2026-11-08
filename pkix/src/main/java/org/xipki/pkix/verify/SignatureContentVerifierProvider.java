@@ -5,11 +5,11 @@ package org.xipki.pkix.verify;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xipki.codec.asn1.GenerationException;
+import org.xipki.asn1.x509.Certificate;
+import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
 import org.xipki.codec.crypto.ContentVerifier;
 import org.xipki.codec.crypto.ContentVerifierProvider;
-import org.xipki.pkix.asn1.x509.Certificate;
 import org.xipki.codec.util.Args;
 import org.xipki.crypto.api.CryptoApi;
 import org.xipki.crypto.api.CryptoApiFactory;
@@ -48,7 +48,7 @@ public class SignatureContentVerifierProvider implements ContentVerifierProvider
     private MyContentVerifier(AlgorithmIdentifier algId, PublicKey verifyKey) {
       this.algId = algId;
       try {
-        this.algorithm = SignAlgo.getInstance(algId).jceName();
+        this.algorithm = SignAlgo.ofAlgorithmIdentifier(algId).jceName();
       } catch (NoSuchAlgorithmException e) {
         throw new RuntimeException("unknown algorithm " +
             algId.getAlgorithm().getId() + ": " + e.getMessage(), e);

@@ -5,11 +5,11 @@ package org.xipki.pkix;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xipki.codec.asn1.GenerationException;
+import org.xipki.asn1.pkcs10.CertificationRequest;
+import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
 import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
 import org.xipki.codec.crypto.ContentVerifierProvider;
-import org.xipki.pkix.asn1.pkcs10.CertificationRequest;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.crypto.core.SignAlgo;
 import org.xipki.codec.util.Args;
@@ -25,9 +25,9 @@ import org.xipki.pkix.sign.ConcurrentSigner;
 import org.xipki.pkix.sign.CsrControl;
 import org.xipki.pkix.sign.SignerConf;
 import org.xipki.pkix.sign.SignerFactoryRegister;
-import org.xipki.pkix.util.KeyUtil;
+import org.xipki.pkix.util.X509KeyUtil;
 import org.xipki.pkix.verify.AlgorithmValidator;
-import org.xipki.pkix.util.misc.LogUtil;
+import org.xipki.util.misc.LogUtil;
 import org.xipki.codec.util.IoUtil;
 
 import javax.crypto.SecretKey;
@@ -134,7 +134,7 @@ public class SecurityFactoryImpl implements SecurityFactory {
   public ContentVerifierProvider getContentVerifierProvider(
       PublicKey publicKey, DHSigStaticKeyCertPair ownerKeyAndCert, SecretKey ownerMasterKey)
       throws InvalidKeyException {
-    return KeyUtil.getContentVerifierProvider(publicKey, ownerKeyAndCert, ownerMasterKey);
+    return X509KeyUtil.getContentVerifierProvider(publicKey, ownerKeyAndCert, ownerMasterKey);
   }
 
   @Override
@@ -160,7 +160,7 @@ public class SecurityFactoryImpl implements SecurityFactory {
     if (!algoValidator.isAlgorithmPermitted(algId)) {
       String algoName;
       try {
-        algoName = SignAlgo.getInstance(algId).jceName();
+        algoName = SignAlgo.ofAlgorithmIdentifier(algId).jceName();
       } catch (Exception ex) {
         algoName = algId.getAlgorithm().getId();
       }

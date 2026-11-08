@@ -36,7 +36,7 @@ import org.xipki.pkix.pkcs11.P11ModuleConf.P11MechanismFilter;
 import org.xipki.pkix.cert.KeyInfoPair;
 import org.xipki.crypto.core.EcCurveEnum;
 import org.xipki.pkix.util.KeyUtil;
-import org.xipki.pkix.util.misc.LogUtil;
+import org.xipki.util.misc.LogUtil;
 
 import java.io.Closeable;
 import java.io.IOException;

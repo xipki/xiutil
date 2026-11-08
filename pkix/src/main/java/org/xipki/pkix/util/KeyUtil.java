@@ -12,12 +12,12 @@ import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
 import org.xipki.codec.asn1.oid.AlgorithmOIDs;
 import org.xipki.codec.asn1.oid.KeyPurposeOIDs;
 import org.xipki.codec.util.XiArrays;
-import org.xipki.pkix.asn1.x500.X500Name;
-import org.xipki.pkix.asn1.x509.BasicConstraints;
-import org.xipki.pkix.asn1.x509.Certificate;
-import org.xipki.pkix.asn1.x509.ExtendedKeyUsage;
-import org.xipki.pkix.asn1.x509.Extension;
-import org.xipki.pkix.asn1.x509.KeyUsage;
+import org.xipki.asn1.x500.X500Name;
+import org.xipki.asn1.x509.BasicConstraints;
+import org.xipki.asn1.x509.Certificate;
+import org.xipki.asn1.x509.ExtendedKeyUsage;
+import org.xipki.asn1.x509.Extension;
+import org.xipki.asn1.x509.KeyUsage;
 import org.xipki.crypto.core.EcCurveEnum;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.codec.util.Args;
@@ -50,7 +50,7 @@ import org.xipki.pkix.verify.CompositeMLDSAContentVerifierProvider;
 import org.xipki.pkix.verify.KEMContentVerifierProvider;
 import org.xipki.pkix.verify.SignatureContentVerifierProvider;
 import org.xipki.pkix.verify.XDHContentVerifierProvider;
-import org.xipki.pkix.util.misc.RandomUtil;
+import org.xipki.util.misc.RandomUtil;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -474,7 +474,7 @@ public class KeyUtil {
     } else {
       byte[] encodedPublicKey = publicKey.getEncoded();
       AlgorithmIdentifier pkAlgId = SubjectPublicKeyInfo.algorithmFromEncoded(encodedPublicKey);
-      algo = SignAlgo.getInstance(pkAlgId);
+      algo = SignAlgo.ofAlgorithmIdentifier(pkAlgId);
       if (algo == null) {
         KeySpec keySpec = KeySpec.ofPublicKey(SubjectPublicKeyInfo.fromEncoded(encodedPublicKey));
         if (keySpec == null) {
@@ -491,7 +491,7 @@ public class KeyUtil {
         } else if (keySpec == KeySpec.MLDSA87) {
           algo = SignAlgo.MLDSA87;
         } else if (keySpec.isCompositeMLDSA()) {
-          algo = SignAlgo.getInstance(keySpec.algorithmIdentifier());
+          algo = SignAlgo.ofAlgorithmIdentifier(keySpec.algorithmIdentifier());
         } else if (allowUnsigned & (keySpec.isMontgomeryEC() ||
             keySpec.isMlkem() || keySpec.isCompositeMLKEM())) {
           return UnsignedSigner.INSTANCE;

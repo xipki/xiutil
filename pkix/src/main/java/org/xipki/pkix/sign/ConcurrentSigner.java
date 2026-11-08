@@ -4,9 +4,9 @@
 package org.xipki.pkix.sign;
 
 import org.xipki.crypto.core.SignAlgo;
-import org.xipki.pkix.exception.NoIdleSignerException;
 import org.xipki.crypto.core.XiSecurityException;
 import org.xipki.pkix.cert.X509Cert;
+import org.xipki.util.exception.NoIdleSignerException;
 
 import java.security.Key;
 import java.security.PublicKey;

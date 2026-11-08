@@ -13,7 +13,7 @@ import org.xipki.crypto.api.CryptoApiFactory;
 import org.xipki.crypto.core.SignAlgo;
 import org.xipki.crypto.core.XiSecurityException;
 import org.xipki.pkix.sign.Signer;
-import org.xipki.pkix.util.misc.RandomUtil;
+import org.xipki.util.misc.RandomUtil;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;

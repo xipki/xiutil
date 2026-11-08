@@ -3,15 +3,15 @@
 
 package org.xipki.pkix.cert;
 
+import org.xipki.asn1.x509.BasicConstraints;
+import org.xipki.asn1.x509.Certificate;
+import org.xipki.asn1.x509.Extension;
+import org.xipki.asn1.x509.Extensions;
+import org.xipki.asn1.x509.KeyUsage;
+import org.xipki.asn1.x509.TBSCertificate;
 import org.xipki.codec.asn1.Asn1Encodable;
 import org.xipki.codec.asn1.Asn1Oid;
 import org.xipki.codec.asn1.oid.ExtensionOIDs;
-import org.xipki.pkix.asn1.x509.BasicConstraints;
-import org.xipki.pkix.asn1.x509.Certificate;
-import org.xipki.pkix.asn1.x509.Extension;
-import org.xipki.pkix.asn1.x509.Extensions;
-import org.xipki.pkix.asn1.x509.KeyUsage;
-import org.xipki.pkix.asn1.x509.TBSCertificate;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.codec.util.Args;
 import org.xipki.crypto.core.SignAlgo;
@@ -180,7 +180,7 @@ public class JceX509Certificate extends X509Certificate {
   @Override
   public String getSigAlgName() {
     try {
-      return SignAlgo.getInstance(cert.getSignatureAlgorithm()).jceName();
+      return SignAlgo.ofAlgorithmIdentifier(cert.getSignatureAlgorithm()).jceName();
     } catch (NoSuchAlgorithmException e) {
       return "";
     }

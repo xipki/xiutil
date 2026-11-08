@@ -5,20 +5,20 @@ package org.xipki.pkix.test;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.xipki.asn1.cert.CtLog;
+import org.xipki.asn1.cert.CtLog.SerializedSCT;
+import org.xipki.asn1.cert.CtLog.SignedCertificateTimestamp;
+import org.xipki.asn1.cert.CtLog.SignedCertificateTimestampList;
 import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
 import org.xipki.codec.asn1.oid.ExtensionOIDs;
 import org.xipki.codec.Hex;
 import org.xipki.crypto.api.CryptoApi;
 import org.xipki.crypto.api.CryptoApiFactory;
 import org.xipki.crypto.core.HashAlgo;
-import org.xipki.pkix.asn1.cert.CtLog;
-import org.xipki.pkix.asn1.cert.CtLog.SerializedSCT;
-import org.xipki.pkix.asn1.cert.CtLog.SignedCertificateTimestamp;
-import org.xipki.pkix.asn1.cert.CtLog.SignedCertificateTimestampList;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.util.X509Util;
-import org.xipki.pkix.util.io.XipkiIoUtil;
+import org.xipki.util.io.XipkiIoUtil;
 
 import java.io.IOException;
 import java.io.InputStream;

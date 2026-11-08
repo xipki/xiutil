@@ -5,6 +5,7 @@ package org.xipki.pkix.pkcs11;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xipki.codec.asn1.Asn1Util;
 import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
 import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
 import org.xipki.codec.crypto.ContentSigner;
@@ -26,8 +27,8 @@ import org.xipki.pkix.sign.Signer;
 import org.xipki.pkix.sign.SignerConf;
 import org.xipki.crypto.core.EcCurveEnum;
 import org.xipki.crypto.core.Pkcs1Util;
-import org.xipki.pkix.util.misc.LogUtil;
-import org.xipki.pkix.util.misc.RandomUtil;
+import org.xipki.util.misc.LogUtil;
+import org.xipki.util.misc.RandomUtil;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -937,7 +938,7 @@ abstract class P11Signer implements Signer {
   } // class SM2
 
   private static byte[] dsaSigPlainToX962(byte[] signature) throws SignatureException {
-    byte[] x962Sig = Functions.dsaSigPlainToX962(Args.notNull(signature, "signature"));
+    byte[] x962Sig = Asn1Util.dsaSigPlainToX962(Args.notNull(signature, "signature"));
 
     if (Arrays.equals(x962Sig, signature)) {
       throw new SignatureException("signature is not correctly encoded.");

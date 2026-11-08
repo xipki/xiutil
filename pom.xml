@@ -3,8 +3,8 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.xipki.pkix</groupId>
-  <artifactId>xipkix</artifactId>
+  <groupId>org.xipki.util</groupId>
+  <artifactId>xiutil</artifactId>
   <packaging>pom</packaging>
   <version>7.0.0-SNAPSHOT</version>
   <name>XiPKI :: ${project.artifactId}</name>
@@ -37,8 +37,12 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <xicrypto.version>7.0.0-SNAPSHOT</xicrypto.version>
-    <!-- BouncyCastle -->
+    <hikaricp.version>7.1.0</hikaricp.version>
     <bcprov.version>2.73.13</bcprov.version>
+    <jdbc.h2.version>2.5.252</jdbc.h2.version>
+    <picocli.version>4.7.7</picocli.version>
+    <jline.version>4.4.8</jline.version>
+    <jakarta.servlet.version>5.0.0</jakarta.servlet.version>
     <slf4j.version>2.0.20</slf4j.version>
     <!-- Only for test purpose -->
     <junit.version>4.13.2</junit.version>
@@ -60,9 +64,17 @@
     <central-publishing-maven-plugin.version>0.11.0</central-publishing-maven-plugin.version>
   </properties>
   <modules>
-    <module>pkix-util</module>
+    <module>util</module>
     <module>pkix-asn1</module>
     <module>pkix</module>
+    <module>acme</module>
+    <module>dns</module>
+    <module>datasource</module>
+    <module>servlet-common</module>
+    <module>shell-base</module>
+    <module>xi-shell</module>
+    <module>security-shell</module>
+    <module>demo-shell</module>
   </modules>
   <scm>
     <connection>scm:git:https://github.com/xipki/xipkix.git</connection>
@@ -173,6 +185,31 @@
   </build>
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>org.jline</groupId>
+        <artifactId>jline</artifactId>
+        <version>${jline.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>info.picocli</groupId>
+        <artifactId>picocli</artifactId>
+        <version>${picocli.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.h2database</groupId>
+        <artifactId>h2</artifactId>
+        <version>${jdbc.h2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>jakarta.servlet</groupId>
+        <artifactId>jakarta.servlet-api</artifactId>
+        <version>${jakarta.servlet.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.zaxxer</groupId>
+        <artifactId>HikariCP</artifactId>
+        <version>${hikaricp.version}</version>
+      </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>

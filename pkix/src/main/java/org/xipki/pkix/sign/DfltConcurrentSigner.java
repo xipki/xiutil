@@ -8,11 +8,11 @@ import org.slf4j.LoggerFactory;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.util.Args;
 import org.xipki.crypto.core.SignAlgo;
-import org.xipki.pkix.exception.NoIdleSignerException;
 import org.xipki.crypto.core.XiSecurityException;
 import org.xipki.pkix.cert.X509Cert;
-import org.xipki.pkix.util.misc.CollectionUtil;
-import org.xipki.pkix.util.misc.LogUtil;
+import org.xipki.util.exception.NoIdleSignerException;
+import org.xipki.util.misc.CollectionUtil;
+import org.xipki.util.misc.LogUtil;
 
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
@@ -79,7 +79,8 @@ public class DfltConcurrentSigner implements ConcurrentSigner {
     Args.notEmpty(signers, "signers");
 
     this.mac = mac;
-    this.algorithm = SignAlgo.getInstance(signers.get(0).x509Signer().getAlgorithmIdentifier());
+    this.algorithm = SignAlgo.ofAlgorithmIdentifier(
+        signers.get(0).x509Signer().getAlgorithmIdentifier());
     this.signers = new ArrayBlockingQueue<>(signers.size());
     this.signers.addAll(signers);
 

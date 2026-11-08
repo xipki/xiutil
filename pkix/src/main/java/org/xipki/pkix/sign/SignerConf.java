@@ -12,7 +12,7 @@ import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.util.X509Util;
 import org.xipki.codec.ConfPairs;
 import org.xipki.codec.exception.InvalidConfException;
-import org.xipki.pkix.util.misc.CollectionUtil;
+import org.xipki.util.misc.CollectionUtil;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
@@ -85,7 +85,7 @@ public class SignerConf {
   public SignAlgo algo() throws InvalidConfException {
     String str = value(name_algo);
     try {
-      return str == null ? null : SignAlgo.getInstance(str);
+      return str == null ? null : SignAlgo.ofName(str);
     } catch (NoSuchAlgorithmException e) {
       throw new InvalidConfException(e);
     }

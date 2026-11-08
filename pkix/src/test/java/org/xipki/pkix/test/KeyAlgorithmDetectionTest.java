@@ -63,7 +63,7 @@ public class KeyAlgorithmDetectionTest {
         KeyInfoUtil.getCurve(key);
         KeyInfoUtil.getAlgorithmOid(key);
         try {
-          SignAlgo.getInstance(key);
+          SignAlgo.ofKey(key);
         } catch (NoSuchAlgorithmException e) {
           // e.g. KEM keys
         }
@@ -83,7 +83,7 @@ public class KeyAlgorithmDetectionTest {
   private static void assertSignAlgo(KeySpec keySpec, SignAlgo expected) throws Exception {
     for (Key key : keys(keySpec)) {
       Assert.assertEquals(keySpec + " (" + key.getAlgorithm() + ")", expected,
-          SignAlgo.getInstance(key));
+          SignAlgo.ofKey(key));
     }
   }
 

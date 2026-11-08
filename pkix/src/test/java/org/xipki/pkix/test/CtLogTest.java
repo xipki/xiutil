@@ -5,13 +5,13 @@ package org.xipki.pkix.test;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.xipki.asn1.cert.CtLog.SignedCertificateTimestamp;
+import org.xipki.asn1.cert.CtLog.SignedCertificateTimestampList;
+import org.xipki.asn1.x509.Certificate;
+import org.xipki.asn1.x509.Extension;
 import org.xipki.codec.asn1.oid.ExtensionOIDs;
-import org.xipki.pkix.asn1.x509.Certificate;
-import org.xipki.pkix.asn1.x509.Extension;
-import org.xipki.pkix.asn1.cert.CtLog.SignedCertificateTimestamp;
-import org.xipki.pkix.asn1.cert.CtLog.SignedCertificateTimestampList;
 import org.xipki.pkix.util.X509Util;
-import org.xipki.pkix.util.io.XipkiIoUtil;
+import org.xipki.util.io.XipkiIoUtil;
 
 /**
  * CTLog test.

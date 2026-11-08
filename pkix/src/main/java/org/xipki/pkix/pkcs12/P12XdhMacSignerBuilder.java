@@ -3,10 +3,10 @@
 
 package org.xipki.pkix.pkcs12;
 
+import org.xipki.asn1.cms.IssuerAndSerialNumber;
+import org.xipki.asn1.crmf.DhSigStatic;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.util.XiArrays;
-import org.xipki.pkix.asn1.cms.IssuerAndSerialNumber;
-import org.xipki.pkix.asn1.crmf.DhSigStatic;
 import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.codec.util.Args;

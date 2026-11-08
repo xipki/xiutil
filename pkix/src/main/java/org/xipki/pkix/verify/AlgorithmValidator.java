@@ -46,7 +46,7 @@ public class AlgorithmValidator {
     for (String algoName : algoNames) {
       SignAlgo sa;
       try {
-        sa = SignAlgo.getInstance(algoName);
+        sa = SignAlgo.ofName(algoName);
       } catch (NoSuchAlgorithmException ex) {
         LOG.warn("algorithm is not supported {}, ignore it", algoName);
         continue;
@@ -80,7 +80,7 @@ public class AlgorithmValidator {
 
     SignAlgo algo;
     try {
-      algo = SignAlgo.getInstance(Args.notNull(algId, "algId"));
+      algo = SignAlgo.ofAlgorithmIdentifier(Args.notNull(algId, "algId"));
     } catch (NoSuchAlgorithmException ex) {
       return false;
     }

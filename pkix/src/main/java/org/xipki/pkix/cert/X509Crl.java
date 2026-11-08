@@ -3,12 +3,12 @@
 
 package org.xipki.pkix.cert;
 
+import org.xipki.asn1.x500.X500Name;
+import org.xipki.asn1.x509.CertificateList;
+import org.xipki.asn1.x509.Extension;
+import org.xipki.asn1.x509.Extensions;
 import org.xipki.codec.asn1.Asn1Oid;
 import org.xipki.codec.asn1.oid.ExtensionOIDs;
-import org.xipki.pkix.asn1.x500.X500Name;
-import org.xipki.pkix.asn1.x509.CertificateList;
-import org.xipki.pkix.asn1.x509.Extension;
-import org.xipki.pkix.asn1.x509.Extensions;
 import org.xipki.codec.util.Args;
 
 import java.math.BigInteger;

@@ -15,7 +15,8 @@ import org.xipki.crypto.core.SignAlgo;
 import org.xipki.crypto.core.composite.CompositeSigSuite;
 import org.xipki.pkix.sign.Signer;
 import org.xipki.pkix.util.KeyUtil;
-import org.xipki.pkix.util.misc.RandomUtil;
+import org.xipki.pkix.util.X509KeyUtil;
+import org.xipki.util.misc.RandomUtil;
 
 import java.security.KeyPair;
 import java.security.SecureRandom;
@@ -58,13 +59,14 @@ public class CompositeSigTest {
     System.out.println("===== BEGIN testing " + suite + " =====");
     KeyPair kp = KeyUtil.generateKeyPair(suite.keySpec());
 
-    SignAlgo signAlgo = SignAlgo.getInstance(kp.getPrivate());
+    SignAlgo signAlgo = SignAlgo.ofKey(kp.getPrivate());
     Assert.assertEquals(suite, signAlgo.compositeSigAlgoSuite());
 
-    Signer signer = KeyUtil.getSigner(kp.getPrivate(), kp.getPublic());
+    Signer signer = X509KeyUtil.getSigner(kp.getPrivate(), kp.getPublic());
     byte[] sigValue = signer.x509Sign(m);
 
-    ContentVerifierProvider verifierProvider = KeyUtil.getContentVerifierProvider(kp.getPublic());
+    ContentVerifierProvider verifierProvider =
+        X509KeyUtil.getContentVerifierProvider(kp.getPublic());
     ContentVerifier verifier = verifierProvider.get(signAlgo.algorithmIdentifier());
     boolean sigValid = verifier.atomicVerify(m, sigValue);
     Assert.assertTrue("message is not valid", sigValid);

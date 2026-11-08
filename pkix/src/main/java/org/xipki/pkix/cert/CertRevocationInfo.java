@@ -9,7 +9,7 @@ import org.xipki.codec.json.JsonEncodable;
 import org.xipki.codec.json.JsonMap;
 import org.xipki.codec.ConfPairs;
 import org.xipki.codec.util.StringUtil;
-import org.xipki.pkix.util.misc.CompareUtil;
+import org.xipki.util.misc.CompareUtil;
 
 import java.time.Instant;
 

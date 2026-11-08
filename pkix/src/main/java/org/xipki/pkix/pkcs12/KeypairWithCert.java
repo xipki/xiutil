@@ -3,14 +3,14 @@
 
 package org.xipki.pkix.pkcs12;
 
+import org.xipki.asn1.x509.Certificate;
 import org.xipki.codec.asn1.crypto.PrivateKeyInfo;
-import org.xipki.pkix.asn1.x509.Certificate;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.crypto.core.XiSecurityException;
 import org.xipki.pkix.cert.X509Cert;
-import org.xipki.pkix.util.KeyUtil;
+import org.xipki.pkix.util.X509KeyUtil;
 import org.xipki.pkix.util.X509Util;
 
 import java.io.InputStream;
@@ -84,7 +84,7 @@ public class KeypairWithCert {
     Args.notNull(keystorePassword, "keystorePassword");
     Args.notNull(keyPassword, "keyPassword");
 
-    Pkcs12KeyStore keystore = KeyUtil.loadPKCS12KeyStore(keystoreStream, keystorePassword);
+    Pkcs12KeyStore keystore = X509KeyUtil.loadPKCS12KeyStore(keystoreStream, keystorePassword);
     return fromKeystore(keystore, keyname, keyPassword, certchain);
   }
 
