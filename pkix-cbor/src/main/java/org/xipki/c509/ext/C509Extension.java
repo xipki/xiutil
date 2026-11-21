@@ -3,12 +3,14 @@
 
 package org.xipki.c509.ext;
 
+import org.xipki.c509.base.C509Cbor;
 import org.xipki.c509.base.C509CborItem;
 import org.xipki.c509.base.C509TextTree;
 import org.xipki.c509.registry.ConstExtensionId;
 import org.xipki.codec.cbor.CborDecoder;
 import org.xipki.codec.cbor.CborEncoder;
 import org.xipki.codec.exception.CodecException;
+import org.xipki.codec.util.Args;
 
 /**
  * One extension (draft-ietf-cose-cbor-encoded-cert-21, Section 3.1.10). Only the integer
@@ -56,6 +58,63 @@ public final class C509Extension extends C509CborItem implements Comparable<C509
 
   public static C509Extension nonCritical(long id, C509ExtnValue value) {
     return new C509Extension(id, false, value);
+  }
+
+  /**
+   * Registers the value class of extension IDs not known to this library, so that they are
+   * decoded into {@code clazz} instead of {@link C509RawExtnValue}. Register before the first
+   * extension with these IDs is decoded or created, e.g. at application start-up. To give the
+   * IDs a name, use {@link ConstExtensionId#register(long, String)}.
+   *
+   * @param <T>    the value class.
+   * @param clazz  the value class.
+   * @param reader reads the value from the CBOR stream, usually {@code MyValue::read}.
+   * @param ids    the extension IDs.
+   * @throws IllegalStateException if one of the IDs is already registered; then none of the
+   *         IDs is registered.
+   */
+  public static <T extends C509ExtnValue> void register(
+      Class<T> clazz, C509Cbor.Reader<T> reader, long... ids) {
+    Args.notNull(clazz, "clazz");
+    Args.notNull(reader, "reader");
+    C509ExtnCatalog.INSTANCE.bind(clazz, reader, checkIds(ids));
+  }
+
+  /**
+   * Like {@link #register}, but the value may also be CBOR null, represented by
+   * {@link C509NullExtnValue#INSTANCE}.
+   */
+  public static <T extends C509ExtnValue> void registerNullable(
+      Class<T> clazz, C509Cbor.Reader<T> reader, long... ids) {
+    Args.notNull(clazz, "clazz");
+    Args.notNull(reader, "reader");
+    C509ExtnCatalog.INSTANCE.bindNullable(clazz, reader, C509NullExtnValue.INSTANCE,
+        checkIds(ids));
+  }
+
+  /**
+   * Registers extension IDs whose value is always CBOR null, represented by
+   * {@link C509NullExtnValue#INSTANCE}, like OCSP no-check.
+   *
+   * @param ids the extension IDs.
+   * @throws IllegalStateException if one of the IDs is already registered; then none of the
+   *         IDs is registered.
+   */
+  public static void registerAlwaysNull(long... ids) {
+    C509ExtnCatalog.INSTANCE.bindAlwaysNull(C509NullExtnValue.INSTANCE, checkIds(ids));
+  }
+
+  private static long[] checkIds(long[] ids) {
+    if (ids == null || ids.length == 0) {
+      throw new IllegalArgumentException("ids must not be empty");
+    }
+
+    for (long id : ids) {
+      if (id <= 0) {
+        throw new IllegalArgumentException("extension ID must be positive: " + id);
+      }
+    }
+    return ids;
   }
 
   public long id() {

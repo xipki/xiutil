@@ -7,8 +7,8 @@ import org.xipki.codec.cbor.CborDecoder;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.util.Args;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongFunction;
 
 /**
@@ -37,7 +37,8 @@ public final class C509Catalog<V extends C509CborItem> {
 
   }
 
-  private final Map<Long, Binding<V>> bindings = new HashMap<>();
+  // concurrent: bindings may be added at runtime while other threads read
+  private final Map<Long, Binding<V>> bindings = new ConcurrentHashMap<>();
 
   private final C509Cbor.Reader<? extends V> fallback;
 
@@ -77,10 +78,18 @@ public final class C509Catalog<V extends C509CborItem> {
     }, nullValue, ids);
   }
 
-  private C509Catalog<V> put(
+  // synchronized: either all or none of the ids are bound
+  private synchronized C509Catalog<V> put(
       Class<? extends V> type, C509Cbor.Reader<? extends V> reader, V nullValue, long... ids) {
+    Args.notNull(reader, "reader");
     for (long id : ids) {
-      if (bindings.put(id, new Binding<>(type, reader, nullValue)) != null) {
+      if (bindings.containsKey(id)) {
+        throw new IllegalStateException("duplicate binding for " + describer.apply(id));
+      }
+    }
+
+    for (long id : ids) {
+      if (bindings.putIfAbsent(id, new Binding<>(type, reader, nullValue)) != null) {
         throw new IllegalStateException("duplicate binding for " + describer.apply(id));
       }
     }

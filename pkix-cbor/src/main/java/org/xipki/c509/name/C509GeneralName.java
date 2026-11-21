@@ -3,6 +3,7 @@
 
 package org.xipki.c509.name;
 
+import org.xipki.c509.base.C509Cbor;
 import org.xipki.c509.base.C509CborItem;
 import org.xipki.c509.base.C509ObjectId;
 import org.xipki.c509.base.C509OtherName;
@@ -18,6 +19,8 @@ import org.xipki.codec.util.IPAddressUtil;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * One entry of a GeneralNames sequence (draft-ietf-cose-cbor-encoded-cert-21, Section 3.3).
@@ -28,12 +31,30 @@ import java.util.Arrays;
  * </pre>
  * <p>
  * Instances are created by the static factories; the concrete shape of the value depends on
- * the tag (see {@link ConstGeneralNameTag}). The value of a tag without a dedicated shape is
- * kept as {@link CborEncodedItem}.
+ * the tag (see {@link ConstGeneralNameTag}). The value of a tag registered with
+ * {@link #register} is decoded into its registered class, see {@link #custom()}; the value of
+ * any other tag without a dedicated shape is kept as {@link CborEncodedItem}.
  *
  * @author Lijun Liao (xipki)
  */
 public abstract class C509GeneralName extends C509CborItem {
+
+  private static final class Binding {
+
+    private final Class<? extends C509CborItem> type;
+
+    private final C509Cbor.Reader<? extends C509CborItem> reader;
+
+    private Binding(Class<? extends C509CborItem> type,
+                    C509Cbor.Reader<? extends C509CborItem> reader) {
+      this.type = type;
+      this.reader = reader;
+    }
+
+  }
+
+  // concurrent: tags may be registered at runtime while other threads read
+  private static final Map<Integer, Binding> CUSTOM_TAGS = new ConcurrentHashMap<>();
 
   private final int tag;
 
@@ -70,9 +91,23 @@ public abstract class C509GeneralName extends C509CborItem {
     return null;
   }
 
-  /** The value of a tag without a dedicated shape, otherwise null. */
+  /** The value of a tag without a dedicated shape and not registered, otherwise null. */
   public CborEncodedItem raw() {
     return null;
+  }
+
+  /** The value of a tag registered with {@link #register}, otherwise null. */
+  public C509CborItem custom() {
+    return null;
+  }
+
+  /**
+   * The value of a tag registered with {@link #register}, cast to the registered class.
+   *
+   * @throws ClassCastException if the value is not an instance of {@code clazz}.
+   */
+  public <T extends C509CborItem> T custom(Class<T> clazz) {
+    return clazz.cast(custom());
   }
 
   protected abstract void writeValue(CborEncoder out) throws CodecException;
@@ -156,18 +191,93 @@ public abstract class C509GeneralName extends C509CborItem {
   }
 
   /**
-   * Creates a general name of a tag without a dedicated shape.
+   * Creates a general name of a tag without a dedicated shape. For a tag registered with
+   * {@link #register}, the value is decoded into the registered class.
    *
    * @param tag   the tag, not one of those with a dedicated shape (e.g. DNS name).
    * @param value the value.
-   * @throws IllegalArgumentException if the tag has a dedicated shape.
+   * @throws IllegalArgumentException if the tag has a dedicated shape, or if the value does not
+   *         fit the class registered for the tag.
    */
   public static C509GeneralName raw(int tag, CborEncodedItem value) {
     if (hasDedicatedShape(tag)) {
       throw new IllegalArgumentException("general name tag "
           + ConstGeneralNameTag.describe(tag) + " has a dedicated shape");
     }
-    return new Raw(tag, value);
+
+    Binding b = CUSTOM_TAGS.get(tag);
+    if (b == null) {
+      return new Raw(tag, value);
+    }
+    return new Custom(tag, convert(tag, b, Args.notNull(value, "value").getEncoded()));
+  }
+
+  /**
+   * Creates a general name of a tag registered with {@link #register}.
+   *
+   * @param tag   the registered tag.
+   * @param value the value. A value of a foreign class is converted to the registered class,
+   *              provided its encoding fits.
+   * @throws IllegalArgumentException if the tag is not registered, or the value does not fit.
+   */
+  public static C509GeneralName of(int tag, C509CborItem value) {
+    Binding b = CUSTOM_TAGS.get(tag);
+    if (b == null) {
+      throw new IllegalArgumentException("general name tag "
+          + ConstGeneralNameTag.describe(tag) + " is not registered");
+    }
+
+    Args.notNull(value, "value");
+    return new Custom(tag,
+        b.type.isInstance(value) ? value : convert(tag, b, value.getEncoded()));
+  }
+
+  private static C509CborItem convert(int tag, Binding b, byte[] encoded) {
+    try {
+      return C509Cbor.parse(encoded, b.reader);
+    } catch (CodecException | RuntimeException e) {
+      throw new IllegalArgumentException("general name tag " + ConstGeneralNameTag.describe(tag)
+          + " does not accept the value", e);
+    }
+  }
+
+  /**
+   * Registers the value class of general name tags not known to this library, so that they are
+   * decoded into {@code clazz} instead of being kept as {@link CborEncodedItem}. Register before
+   * the first general name with these tags is decoded or created, e.g. at application start-up.
+   * To give the tags a name, use {@link ConstGeneralNameTag#register(int, String)}.
+   *
+   * @param <T>    the value class.
+   * @param clazz  the value class.
+   * @param reader reads the value from the CBOR stream, usually {@code MyValue::read}.
+   * @param tags   the general name tags.
+   * @throws IllegalArgumentException if one of the tags has a dedicated shape (e.g. DNS name).
+   * @throws IllegalStateException if one of the tags is already registered. In both cases none
+   *         of the tags is registered.
+   */
+  public static synchronized <T extends C509CborItem> void register(
+      Class<T> clazz, C509Cbor.Reader<T> reader, int... tags) {
+    Args.notNull(clazz, "clazz");
+    Args.notNull(reader, "reader");
+    if (tags == null || tags.length == 0) {
+      throw new IllegalArgumentException("tags must not be empty");
+    }
+
+    for (int tag : tags) {
+      if (hasDedicatedShape(tag)) {
+        throw new IllegalArgumentException("general name tag "
+            + ConstGeneralNameTag.describe(tag) + " has a dedicated shape");
+      }
+      if (CUSTOM_TAGS.containsKey(tag)) {
+        throw new IllegalStateException("duplicate registration for general name tag "
+            + ConstGeneralNameTag.describe(tag));
+      }
+    }
+
+    Binding binding = new Binding(clazz, reader);
+    for (int tag : tags) {
+      CUSTOM_TAGS.put(tag, binding);
+    }
   }
 
   private static boolean hasDedicatedShape(int tag) {
@@ -212,7 +322,9 @@ public abstract class C509GeneralName extends C509CborItem {
       case ConstGeneralNameTag.MACAddress:
         return macAddress(in.readByteString());
       default:
-        return new Raw(tag, in.readEncodedItem());
+        Binding b = CUSTOM_TAGS.get(tag);
+        return (b == null) ? new Raw(tag, in.readEncodedItem())
+            : new Custom(tag, b.reader.read(in));
     }
   }
 
@@ -374,6 +486,32 @@ public abstract class C509GeneralName extends C509CborItem {
     @Override
     protected void render(C509TextTree out) {
       out.item(label, value);
+    }
+
+  }
+
+  private static final class Custom extends C509GeneralName {
+
+    private final C509CborItem value;
+
+    private Custom(int tag, C509CborItem value) {
+      super(tag);
+      this.value = Args.notNull(value, "value");
+    }
+
+    @Override
+    public C509CborItem custom() {
+      return value;
+    }
+
+    @Override
+    protected void writeValue(CborEncoder out) throws CodecException {
+      value.encode(out);
+    }
+
+    @Override
+    protected void render(C509TextTree out) {
+      out.item(ConstGeneralNameTag.describe(tag()), value);
     }
 
   }

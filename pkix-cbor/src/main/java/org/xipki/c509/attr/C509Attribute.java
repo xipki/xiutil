@@ -4,12 +4,14 @@
 package org.xipki.c509.attr;
 
 import org.xipki.c509.base.C509Catalog;
+import org.xipki.c509.base.C509Cbor;
 import org.xipki.c509.base.C509CborItem;
 import org.xipki.c509.base.C509TextTree;
 import org.xipki.c509.registry.ConstAttributeType;
 import org.xipki.codec.cbor.CborDecoder;
 import org.xipki.codec.cbor.CborEncoder;
 import org.xipki.codec.exception.CodecException;
+import org.xipki.codec.util.Args;
 
 /**
  * One attribute of a certification request (draft-ietf-cose-cbor-encoded-cert-21, Section 4.1).
@@ -49,6 +51,29 @@ public final class C509Attribute extends C509CborItem implements Comparable<C509
   private final long type;
 
   private final C509AttrValue value;
+
+  /**
+   * Registers the value class of attribute types not known to this library, so that they are
+   * decoded into {@code clazz} instead of {@link C509RawAttrValue}. Register before the first
+   * attribute of these types is decoded or created, e.g. at application start-up. To give the
+   * types a name, use {@link ConstAttributeType#register(long, String)}.
+   *
+   * @param <T>   the value class.
+   * @param clazz the value class.
+   * @param reader reads the value from the CBOR stream, usually {@code MyValue::read}.
+   * @param types the attribute types.
+   * @throws IllegalStateException if one of the types is already registered; then none of the
+   *         types is registered.
+   */
+  public static <T extends C509AttrValue> void register(
+      Class<T> clazz, C509Cbor.Reader<T> reader, long... types) {
+    Args.notNull(clazz, "clazz");
+    Args.notNull(reader, "reader");
+    if (types == null || types.length == 0) {
+      throw new IllegalArgumentException("types must not be empty");
+    }
+    CATALOG.bind(clazz, reader, types);
+  }
 
   /**
    * @param type  the attribute type, see {@link ConstAttributeType}.
