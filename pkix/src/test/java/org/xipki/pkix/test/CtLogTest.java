@@ -9,7 +9,7 @@ import org.xipki.asn1.cert.CtLog.SignedCertificateTimestamp;
 import org.xipki.asn1.cert.CtLog.SignedCertificateTimestampList;
 import org.xipki.asn1.x509.Certificate;
 import org.xipki.asn1.x509.Extension;
-import org.xipki.codec.asn1.oid.ExtensionOIDs;
+import org.xipki.codec.x509.id.ExtensionOIDs;
 import org.xipki.pkix.util.X509Util;
 import org.xipki.util.io.XipkiIoUtil;
 

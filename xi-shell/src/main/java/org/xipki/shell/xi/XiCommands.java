@@ -26,6 +26,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -279,6 +280,10 @@ class XiCommands {
     @Option(names = "--base64", description = "Base64-encode the content")
     private boolean base64;
 
+    @Option(names = "--no-fail",
+        description = "do not fail if the HTTP status code is not 2xx")
+    private boolean noFail;
+
     @Override
     public void run() {
       try {
@@ -322,7 +327,10 @@ class XiCommands {
           if (result.content() != null) {
             saveVerbose("saved response to file", outFile, result.content());
           } else {
-            saveVerbose("saved (error) response to file", "error-" + outFile,
+            Path errorFile = Paths.get(outFile);
+            Path errorFileName = errorFile.getFileName();
+            errorFile = errorFile.resolveSibling("error-" + errorFileName);
+            saveVerbose("saved (error) response to file", errorFile.toString(),
                 result.errorContent());
           }
         } else {
@@ -336,8 +344,14 @@ class XiCommands {
           }
         }
 
-        if (result.statusCode() != HttpStatusCode.SC_OK) {
-          throw new RuntimeException("Received status code other than OK: " + result.statusCode());
+        int statusCode = result.statusCode();
+        if (statusCode < HttpStatusCode.SC_OK || statusCode >= 300) {
+          String msg = "received HTTP status code " + statusCode;
+          if (noFail) {
+            println("WARN: " + msg);
+          } else {
+            throw new RuntimeException(msg);
+          }
         }
       } catch (Exception ex) {
         throw new RuntimeException(ex.getMessage(), ex);
@@ -615,6 +629,16 @@ class XiCommands {
       } else {
         println("");
       }
+    }
+  }
+
+  @Command(name = "pwd", description = "print the current working directory",
+      mixinStandardHelpOptions = true)
+  static class Pwd extends ShellBaseCommand {
+
+    @Override
+    public void run() {
+      println(Paths.get("").toAbsolutePath().normalize().toString());
     }
   }
 

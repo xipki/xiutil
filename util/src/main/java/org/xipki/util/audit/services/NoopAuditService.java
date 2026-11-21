@@ -3,7 +3,7 @@
 
 package org.xipki.util.audit.services;
 
-import org.xipki.codec.ConfPairs;
+import org.xipki.codec.util.ConfPairs;
 import org.xipki.util.audit.AuditEvent;
 import org.xipki.util.audit.AuditService;
 import org.xipki.util.audit.PciAuditEvent;

@@ -7,17 +7,16 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.xipki.asn1.x500.X500Name;
 import org.xipki.asn1.x509.Certificate;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
-import org.xipki.codec.crypto.ContentVerifierProvider;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.crypto.ContentVerifierFactory;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.SignAlgo;
-import org.xipki.pkix.pkcs12.P12XdhMacSignerBuilder;
 import org.xipki.pkix.cert.DHSigStaticKeyCertPair;
+import org.xipki.pkix.pkcs12.X509P12XdhMacSignerBuilder;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.sign.ConcurrentSigner;
 import org.xipki.pkix.util.KeyUtil;
-import org.xipki.pkix.util.X509KeyUtil;
-import org.xipki.pkix.verify.XDHContentVerifierProvider;
+import org.xipki.pkix.sign.XDHContentVerifierFactory;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -56,29 +55,29 @@ public class DhPopTest {
     Certificate asn1Cert = new Certificate.V3CertBuilder(issuer, BigInteger.ONE,
         now, now.plus(1, ChronoUnit.DAYS), new X500Name("CN=DH POP " + keySpec),
         SubjectPublicKeyInfo.fromPublicKey(caDhKp.getPublic()))
-        .build(X509KeyUtil.getSigner(issuerKp.getPrivate(), issuerKp.getPublic()).contentSigner());
+        .build(KeyUtil.getSigner(issuerKp.getPrivate(), issuerKp.getPublic()).contentSigner());
     X509Cert caDhCert = new X509Cert(asn1Cert);
 
     // the requestor: MAC with the key agreed with the static DH key of the CA
     KeyPair kp = KeyUtil.generateKeyPair(keySpec);
-    ConcurrentSigner signer = new P12XdhMacSignerBuilder(caDhCert, kp.getPrivate(),
+    ConcurrentSigner signer = new X509P12XdhMacSignerBuilder(caDhCert, kp.getPrivate(),
         kp.getPublic()).createSigner(1);
     Assert.assertEquals(keySpec + ": POP algorithm", popAlgo, signer.algorithm());
-    byte[] signature = signer.x509Sign(DATA);
+    byte[] signature = signer.atomicX509Sign(DATA);
 
     // the CA: verifies the POP
-    ContentVerifierProvider cvp = X509KeyUtil.getContentVerifierProvider(kp.getPublic(),
-        new DHSigStaticKeyCertPair(caDhKp.getPrivate(), caDhCert), null);
+    ContentVerifierFactory cvp = KeyUtil.getContentVerifierFactory(kp.getPublic(),
+        new DHSigStaticKeyCertPair.X509(caDhKp.getPrivate(), caDhCert), null);
     Assert.assertTrue(keySpec + ": verifier " + cvp.getClass().getName(),
-        cvp instanceof XDHContentVerifierProvider);
+        cvp instanceof XDHContentVerifierFactory);
 
     Assert.assertTrue(keySpec + ": valid POP",
-        cvp.get(popAlgo.algorithmIdentifier()).atomicVerify(DATA, signature));
+        cvp.get(popAlgo.algorithmIdentifier()).atomicX509Verify(DATA, signature));
 
     byte[] otherData = DATA.clone();
     otherData[0] ^= 1;
     Assert.assertFalse(keySpec + ": POP over other data",
-        cvp.get(popAlgo.algorithmIdentifier()).atomicVerify(otherData, signature));
+        cvp.get(popAlgo.algorithmIdentifier()).atomicX509Verify(otherData, signature));
   }
 
 }

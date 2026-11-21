@@ -3,8 +3,8 @@
 
 package org.xipki.pkix.pkcs12;
 
-import org.xipki.codec.asn1.crypto.GCMParameters;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
+import org.xipki.codec.x509.GCMParameters;
+import org.xipki.codec.x509.AlgorithmIdentifier;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.util.XiArrays;
@@ -159,13 +159,13 @@ public class AESGmacContentSigner implements Signer {
     final AESGmacOutputStream outputStream = new AESGmacOutputStream(cipher);
 
     @Override
-    public AlgorithmIdentifier getAlgorithmIdentifier() {
+    public AlgorithmIdentifier x509Algorithm() {
       return AlgorithmIdentifier.build(signAlgo.oid(), new GCMParameters(nonce, tagByteLen));
     }
 
     @Override
-    public Integer getC509AlgorithmIdentifier() {
-      return null;
+    public int c509Algorithm() {
+      throw new IllegalStateException("AES-GMAC is not C509 capable");
     }
 
     @Override
@@ -175,7 +175,7 @@ public class AESGmacContentSigner implements Signer {
     }
 
     @Override
-    public byte[] getSignature() {
+    public byte[] getX509Signature() {
       try {
         return cipher.doFinal();
       } catch (IllegalBlockSizeException ex) {

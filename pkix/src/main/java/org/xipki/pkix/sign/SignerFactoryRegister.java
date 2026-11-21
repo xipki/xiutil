@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.util.Args;
 import org.xipki.pkix.SecurityFactory;
+import org.xipki.pkix.cert.C509Cert;
 import org.xipki.pkix.cert.X509Cert;
 
 import java.util.ArrayList;
@@ -89,15 +90,33 @@ public class SignerFactoryRegister {
   public ConcurrentSigner newSigner(
       SecurityFactory securityFactory, String type, SignerConf conf, X509Cert[] certificateChain)
       throws GenerationException {
+    return newSigner(true, securityFactory, type, conf, certificateChain, null);
+  }
+
+  public ConcurrentSigner newSigner(
+      SecurityFactory securityFactory, String type, SignerConf conf, C509Cert[] certificateChain)
+      throws GenerationException {
+    return newSigner(false, securityFactory, type, conf, null, certificateChain);
+  }
+
+  private ConcurrentSigner newSigner(
+      boolean x509, SecurityFactory securityFactory, String type, SignerConf conf,
+      X509Cert[] x509CertChain, C509Cert[] c509CertChain)
+      throws GenerationException {
     Args.notBlank(type, "type");
 
     for (SignerFactory service : factories) {
       if (service.canCreateSigner(type)) {
-        return service.newSigner(securityFactory, type, conf, certificateChain);
+        if (x509) {
+          return service.newSigner(securityFactory, type, conf, x509CertChain);
+        } else {
+          return service.newSigner(securityFactory, type, conf, c509CertChain);
+        }
       }
     }
 
     throw new GenerationException("could not find Factory to create Signer of type " + type);
   }
+
 
 }

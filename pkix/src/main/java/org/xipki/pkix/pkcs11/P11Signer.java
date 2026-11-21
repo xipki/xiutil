@@ -6,8 +6,10 @@ package org.xipki.pkix.pkcs11;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xipki.codec.asn1.Asn1Util;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.c509.BytesSignatureValue;
+import org.xipki.codec.c509.SignatureValue;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.crypto.DigestOutputStream;
 import org.xipki.codec.util.XiArrays;
@@ -227,7 +229,7 @@ abstract class P11Signer implements Signer {
     private class MyContentSigner implements ContentSigner {
 
       @Override
-      public AlgorithmIdentifier getAlgorithmIdentifier() {
+      public AlgorithmIdentifier x509Algorithm() {
         return signAlgo.algorithmIdentifier();
       }
 
@@ -242,7 +244,7 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] getSignature() throws SignatureException {
+      public byte[] getX509Signature() throws SignatureException {
         try {
           return dsaSigPlainToX962(getPlainSignature());
         } catch (SignatureException ex) {
@@ -255,7 +257,7 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] atomicSign(byte[] toBeSignData) throws SignatureException {
+      public byte[] atomicX509Sign(byte[] toBeSignData) throws SignatureException {
         try {
           return dsaSigPlainToX962(getPlainSignature(toBeSignData));
         } catch (SignatureException ex) {
@@ -268,9 +270,10 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] getC509Signature() throws SignatureException {
+      public SignatureValue getC509Signature() throws SignatureException {
+        c509Algorithm();
         try {
-          return getPlainSignature();
+          return new BytesSignatureValue(getPlainSignature());
         } catch (TokenException ex) {
           LogUtil.warn(LOG, ex);
           throw new SignatureException(ex);
@@ -278,13 +281,14 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] atomicC509Sign(byte[] dataToSign) throws SignatureException {
-        return getPlainSignature(dataToSign);
+      public SignatureValue atomicC509Sign(byte[] dataToSign) throws SignatureException {
+        c509Algorithm();
+        return new BytesSignatureValue(getPlainSignature(dataToSign));
       }
 
       @Override
-      public Integer getC509AlgorithmIdentifier() {
-        return signAlgo.c509AlgorithmIdentifier();
+      public int c509Algorithm() {
+        return ContentSigner.checkC509AlgId(signAlgo.c509AlgorithmIdentifier(), signAlgo);
       }
 
     }
@@ -325,7 +329,7 @@ abstract class P11Signer implements Signer {
     private class MyContentSigner implements ContentSigner {
 
       @Override
-      public AlgorithmIdentifier getAlgorithmIdentifier() {
+      public AlgorithmIdentifier x509Algorithm() {
         return signAlgo.algorithmIdentifier();
       }
 
@@ -336,14 +340,14 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] getSignature() throws SignatureException {
+      public byte[] getX509Signature() throws SignatureException {
         byte[] content = outputStream.toByteArray();
         outputStream.reset();
-        return atomicSign(content);
+        return atomicX509Sign(content);
       }
 
       @Override
-      public byte[] atomicSign(byte[] dataToSign) throws SignatureException {
+      public byte[] atomicX509Sign(byte[] dataToSign) throws SignatureException {
         try {
           P11Params params = null;
           if (signAlgo == ED448) {
@@ -358,8 +362,8 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public Integer getC509AlgorithmIdentifier() {
-        return signAlgo.c509AlgorithmIdentifier();
+      public int c509Algorithm() {
+        return ContentSigner.checkC509AlgId(signAlgo.c509AlgorithmIdentifier(), signAlgo);
       }
     }
 
@@ -396,7 +400,7 @@ abstract class P11Signer implements Signer {
     private class MyContentSigner implements ContentSigner {
 
       @Override
-      public AlgorithmIdentifier getAlgorithmIdentifier() {
+      public AlgorithmIdentifier x509Algorithm() {
         return signAlgo.algorithmIdentifier();
       }
 
@@ -407,14 +411,14 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] getSignature() throws SignatureException {
+      public byte[] getX509Signature() throws SignatureException {
         byte[] content = outputStream.toByteArray();
         outputStream.reset();
-        return atomicSign(content);
+        return atomicX509Sign(content);
       }
 
       @Override
-      public byte[] atomicSign(byte[] toBeSignData) throws SignatureException {
+      public byte[] atomicX509Sign(byte[] toBeSignData) throws SignatureException {
         try {
           P11Params params = (toBeSignData.length == 0) ? null
               : new P11Params.P11SignAdditionalContext(context);
@@ -426,8 +430,8 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public Integer getC509AlgorithmIdentifier() {
-        return signAlgo.c509AlgorithmIdentifier();
+      public int c509Algorithm() {
+        return ContentSigner.checkC509AlgId(signAlgo.c509AlgorithmIdentifier(), signAlgo);
       }
     }
 
@@ -507,7 +511,7 @@ abstract class P11Signer implements Signer {
     private class MyContentSigner implements ContentSigner {
 
       @Override
-      public AlgorithmIdentifier getAlgorithmIdentifier() {
+      public AlgorithmIdentifier x509Algorithm() {
         return signAlgo.algorithmIdentifier();
       }
 
@@ -518,14 +522,14 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] getSignature() throws SignatureException {
+      public byte[] getX509Signature() throws SignatureException {
         byte[] dataToSign = outputStream.toByteArray();
         outputStream.reset();
-        return atomicSign(dataToSign);
+        return atomicX509Sign(dataToSign);
       }
 
       @Override
-      public byte[] atomicSign(byte[] dataToSign) throws SignatureException {
+      public byte[] atomicX509Sign(byte[] dataToSign) throws SignatureException {
         try {
           return identity.sign(mechanism, null, dataToSign);
         } catch (TokenException ex) {
@@ -538,8 +542,8 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public Integer getC509AlgorithmIdentifier() {
-        return signAlgo.c509AlgorithmIdentifier();
+      public int c509Algorithm() {
+        return ContentSigner.checkC509AlgId(signAlgo.c509AlgorithmIdentifier(), signAlgo);
       }
     }
 
@@ -615,7 +619,7 @@ abstract class P11Signer implements Signer {
     private class MyContentSigner implements ContentSigner {
 
       @Override
-      public AlgorithmIdentifier getAlgorithmIdentifier() {
+      public AlgorithmIdentifier x509Algorithm() {
         return signAlgo.algorithmIdentifier();
       }
 
@@ -630,7 +634,7 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] getSignature() {
+      public byte[] getX509Signature() {
         byte[] dataToSign;
         if (outputStream instanceof ByteArrayOutputStream) {
           dataToSign = ((ByteArrayOutputStream) outputStream).toByteArray();
@@ -654,7 +658,7 @@ abstract class P11Signer implements Signer {
       } // method getSignature
 
       @Override
-      public byte[] atomicSign(byte[] dataToSign) throws SignatureException {
+      public byte[] atomicX509Sign(byte[] dataToSign) throws SignatureException {
         try {
           byte[] dataToHsm;
           if (outputStream instanceof ByteArrayOutputStream) {
@@ -678,8 +682,8 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public Integer getC509AlgorithmIdentifier() {
-        return signAlgo.c509AlgorithmIdentifier();
+      public int c509Algorithm() {
+        return ContentSigner.checkC509AlgId(signAlgo.c509AlgorithmIdentifier(), signAlgo);
       }
 
     }
@@ -766,7 +770,7 @@ abstract class P11Signer implements Signer {
     private class MyContentSigner implements ContentSigner {
 
       @Override
-      public AlgorithmIdentifier getAlgorithmIdentifier() {
+      public AlgorithmIdentifier x509Algorithm() {
         return signAlgo.algorithmIdentifier();
       }
 
@@ -782,7 +786,7 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] getSignature() throws SignatureException {
+      public byte[] getX509Signature() throws SignatureException {
         try {
           if (mechanism == CKM_RSA_X_509) {
             HashAlgo hash = signAlgo.hashAlgo();
@@ -814,7 +818,7 @@ abstract class P11Signer implements Signer {
       }// method getSignature
 
       @Override
-      public byte[] atomicSign(byte[] dataToSign) throws SignatureException {
+      public byte[] atomicX509Sign(byte[] dataToSign) throws SignatureException {
         try {
           if (mechanism == CKM_RSA_X_509) {
             HashAlgo hash = signAlgo.hashAlgo();
@@ -847,8 +851,8 @@ abstract class P11Signer implements Signer {
       }// method atomicSign
 
       @Override
-      public Integer getC509AlgorithmIdentifier() {
-        return signAlgo.c509AlgorithmIdentifier();
+      public int c509Algorithm() {
+        return ContentSigner.checkC509AlgId(signAlgo.c509AlgorithmIdentifier(), signAlgo);
       }
     }
 
@@ -919,13 +923,13 @@ abstract class P11Signer implements Signer {
     private class MyContentSigner implements ContentSigner {
 
       @Override
-      public AlgorithmIdentifier getAlgorithmIdentifier() {
+      public AlgorithmIdentifier x509Algorithm() {
         return signAlgo.algorithmIdentifier();
       }
 
       @Override
-      public Integer getC509AlgorithmIdentifier() {
-        return signAlgo.c509AlgorithmIdentifier();
+      public int c509Algorithm() {
+        return ContentSigner.checkC509AlgId(signAlgo.c509AlgorithmIdentifier(), signAlgo);
       }
 
       @Override
@@ -935,7 +939,7 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] getSignature() throws SignatureException {
+      public byte[] getX509Signature() throws SignatureException {
         try {
           return dsaSigPlainToX962(getPlainSignature());
         } catch (SignatureException ex) {
@@ -948,7 +952,7 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] atomicSign(byte[] dataToSign) throws SignatureException {
+      public byte[] atomicX509Sign(byte[] dataToSign) throws SignatureException {
         try {
           return dsaSigPlainToX962(getPlainSignature(dataToSign));
         } catch (SignatureException ex) {
@@ -961,9 +965,10 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] getC509Signature() throws SignatureException {
+      public SignatureValue getC509Signature() throws SignatureException {
+        c509Algorithm();
         try {
-          return getPlainSignature();
+          return new BytesSignatureValue(getPlainSignature());
         } catch (Throwable th) {
           LogUtil.warn(LOG, th);
           throw new SignatureException(th.getClass().getName() + ": " + th.getMessage());
@@ -971,9 +976,10 @@ abstract class P11Signer implements Signer {
       }
 
       @Override
-      public byte[] atomicC509Sign(byte[] dataToSign) throws SignatureException {
+      public SignatureValue atomicC509Sign(byte[] dataToSign) throws SignatureException {
+        c509Algorithm();
         try {
-          return getPlainSignature(dataToSign);
+          return new BytesSignatureValue(getPlainSignature(dataToSign));
         } catch (Throwable th) {
           LogUtil.warn(LOG, th);
           throw new SignatureException(th.getClass().getName() + ": " + th.getMessage());

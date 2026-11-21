@@ -89,10 +89,6 @@ public class AuthorityKeyIdentifier extends Asn1Encodable {
     this.certSerialNumber = serialNumber;
   }
 
-  public byte[] getKeyIdentifierOctets() {
-    return (keyIdentifier != null) ? keyIdentifier.getOctets() : null;
-  }
-
   public Asn1OctetString getKeyIdentifier() {
     return keyIdentifier;
   }

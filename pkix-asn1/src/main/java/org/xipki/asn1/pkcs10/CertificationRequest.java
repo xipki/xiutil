@@ -15,13 +15,13 @@ import org.xipki.codec.asn1.Asn1Oid;
 import org.xipki.codec.asn1.Asn1Primitive;
 import org.xipki.codec.asn1.Asn1Sequence;
 import org.xipki.codec.asn1.Asn1Util;
+import org.xipki.codec.crypto.ContentVerifierFactory;
 import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.crypto.ContentVerifier;
-import org.xipki.codec.crypto.ContentVerifierProvider;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
-import org.xipki.codec.asn1.oid.AttributeOIDs;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.id.AttributeOIDs;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 
@@ -65,8 +65,8 @@ public static class CsrBuilder {
   public CertificationRequest build(ContentSigner signer) throws SignatureException {
     CertificationRequestInfo info = new CertificationRequestInfo(subject, publicKeyInfo,
         attrsGenerator.buildSet0());
-    byte[] signature = signer.atomicSign(info.getEncoded());
-    return new CertificationRequest(info, signer.getAlgorithmIdentifier(), signature);
+    byte[] signature = signer.atomicX509Sign(info.getEncoded());
+    return new CertificationRequest(info, signer.x509Algorithm(), signature);
   }
 
 }
@@ -159,15 +159,15 @@ public static class CsrBuilder {
     return new Asn1Sequence(requestInfo, algorithm, signature);
   }
 
-  public boolean isSignatureValid(ContentVerifierProvider verifierProvider)
+  public boolean isSignatureValid(ContentVerifierFactory verifierFactory)
       throws SignatureException {
     ContentVerifier verifier;
     try {
-      verifier = verifierProvider.get(algorithm);
+      verifier = verifierFactory.get(algorithm);
     } catch (GenerationException e) {
       throw new SignatureException(e.getMessage(), e);
     }
-    return verifier.atomicVerify(requestInfo.getEncoded(), signature.getOctets());
+    return verifier.atomicX509Verify(requestInfo.getEncoded(), signature.getOctets());
   }
 
   @Override

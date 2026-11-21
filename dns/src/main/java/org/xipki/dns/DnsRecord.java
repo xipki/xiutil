@@ -3,8 +3,9 @@
 
 package org.xipki.dns;
 
+import org.xipki.codec.util.Args;
+
 import java.nio.charset.StandardCharsets;
-import java.util.Objects;
 
 /**
  * Resource record. The RDATA is stored in canonical form (RFC 4034 section 6.2):
@@ -45,11 +46,11 @@ public final class DnsRecord {
   private final byte[] rdata;
 
   public DnsRecord(DnsName name, int type, int dclass, long ttl, byte[] rdata) {
-    this.name = Objects.requireNonNull(name, "name");
+    this.name = Args.notNull(name, "name");
     this.type = type;
     this.dclass = dclass;
     this.ttl = ttl;
-    this.rdata = Objects.requireNonNull(rdata, "rdata");
+    this.rdata = Args.notNull(rdata, "rdata");
   }
 
   public DnsName name() {

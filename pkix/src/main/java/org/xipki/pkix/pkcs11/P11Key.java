@@ -6,8 +6,8 @@ package org.xipki.pkix.pkcs11;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xipki.codec.asn1.Asn1Oid;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.codec.util.Args;
 import org.xipki.pkcs11.wrapper.ExtraParams;
@@ -331,7 +331,7 @@ public class P11Key {
     return key.id().type() == PKCS11KeyId.KeyIdType.SECRET_KEY;
   }
 
-  public  PublicKey publicKey() {
+  public PublicKey publicKey() {
     if (isSecretKey()) {
       return null;
     }

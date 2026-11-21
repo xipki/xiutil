@@ -3,7 +3,7 @@
 
 package org.xipki.util.audit;
 
-import org.xipki.codec.ConfPairs;
+import org.xipki.codec.util.ConfPairs;
 import org.xipki.codec.exception.InvalidConfException;
 
 /**

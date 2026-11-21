@@ -3,10 +3,10 @@
 
 package org.xipki.pkix.sign;
 
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.oid.AlgorithmOIDs;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.id.AlgorithmOIDs;
 import org.xipki.codec.Hex;
-import org.xipki.codec.c509.ConstSignatureAlgorithm;
+import org.xipki.codec.c509.id.ConstSignatureAlgorithm;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.crypto.NopOutputStream;
 
@@ -33,12 +33,12 @@ public class UnsignedSigner implements Signer {
 
     this.x509Signer = new ContentSigner() {
       @Override
-      public AlgorithmIdentifier getAlgorithmIdentifier() {
+      public AlgorithmIdentifier x509Algorithm() {
         return x509AlgId;
       }
 
       @Override
-      public Integer getC509AlgorithmIdentifier() {
+      public int c509Algorithm() {
         return ConstSignatureAlgorithm.unsigned;
       }
 
@@ -48,12 +48,12 @@ public class UnsignedSigner implements Signer {
       }
 
       @Override
-      public byte[] getSignature() {
+      public byte[] getX509Signature() {
         return new byte[0];
       }
 
       @Override
-      public byte[] atomicSign(byte[] toBeSignData) throws SignatureException {
+      public byte[] atomicX509Sign(byte[] toBeSignData) throws SignatureException {
         return new byte[0];
       }
 

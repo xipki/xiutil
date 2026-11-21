@@ -5,9 +5,9 @@ package org.xipki.pkix.test;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
 import org.xipki.codec.crypto.ContentSigner;
-import org.xipki.codec.crypto.ContentVerifierProvider;
+import org.xipki.codec.crypto.ContentVerifierFactory;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.SignAlgo;
 import org.xipki.crypto.core.KemUtil;
@@ -15,9 +15,8 @@ import org.xipki.crypto.core.KemEncapKey;
 import org.xipki.crypto.core.KemEncapsulation;
 import org.xipki.pkix.sign.KemHmacSigner;
 import org.xipki.pkix.util.KeyUtil;
-import org.xipki.pkix.util.X509KeyUtil;
 import org.xipki.crypto.core.SecretKeyWithAlias;
-import org.xipki.pkix.verify.KEMContentVerifierProvider;
+import org.xipki.pkix.sign.KEMContentVerifierFactory;
 import org.xipki.util.misc.RandomUtil;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -99,7 +98,7 @@ public class KemPopTest {
     for (KeySpec keySpec : new KeySpec[]{KeySpec.X25519, KeySpec.X448}) {
       KeyPair kp = KeyUtil.generateKeyPair(keySpec);
       try {
-        X509KeyUtil.getContentVerifierProvider(kp.getPublic(), null, null);
+        KeyUtil.getContentVerifierFactory(kp.getPublic(), null, null);
         Assert.fail(keySpec + ": InvalidKeyException expected");
       } catch (InvalidKeyException e) {
         Assert.assertTrue(keySpec + ": " + e.getMessage(),
@@ -131,21 +130,21 @@ public class KemPopTest {
 
     ContentSigner signer = new KemHmacSigner(encapKey.id(),
         new SecretKeySpec(macKey, "HMAC-SHA256")).contentSigner();
-    byte[] signature = signer.atomicSign(DATA);
+    byte[] signature = signer.atomicX509Sign(DATA);
 
     // CA: verifies the POP
-    ContentVerifierProvider cvp =
-        X509KeyUtil.getContentVerifierProvider(kp.getPublic(), null, masterKey.secretKey());
+    ContentVerifierFactory cvp = KeyUtil.getContentVerifierFactory(
+        kp.getPublic(), null, masterKey.secretKey());
     Assert.assertTrue(keySpec + ": verifier " + cvp.getClass().getName(),
-        cvp instanceof KEMContentVerifierProvider);
+        cvp instanceof KEMContentVerifierFactory);
 
     Assert.assertTrue(keySpec + ": valid POP", cvp.get(SignAlgo.KEM_HMAC_SHA256
-        .algorithmIdentifier()).atomicVerify(DATA, signature));
+        .algorithmIdentifier()).atomicX509Verify(DATA, signature));
 
     byte[] otherData = DATA.clone();
     otherData[0] ^= 1;
     Assert.assertFalse(keySpec + ": POP over other data", cvp.get(SignAlgo.KEM_HMAC_SHA256
-        .algorithmIdentifier()).atomicVerify(otherData, signature));
+        .algorithmIdentifier()).atomicX509Verify(otherData, signature));
   }
 
 }

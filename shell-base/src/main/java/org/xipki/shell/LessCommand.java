@@ -68,7 +68,7 @@ class LessCommand implements Runnable {
 
     try {
       while (true) {
-        int pageHeight = Math.max(1, terminal.getHeight() - 1);
+        int pageHeight = Math.max(1, terminal.getSize().getRows() - 1);
         topLine = Math.max(0, Math.min(topLine, Math.max(0, lines.size() - 1)));
         renderPager(path, lines, topLine, pageHeight, lastSearch, terminal);
 
@@ -158,7 +158,7 @@ class LessCommand implements Runnable {
   private void renderPager(Path path, List<String> lines, int topLine, int pageHeight,
       String highlightPattern, Terminal terminal) {
     clearTerminal();
-    int width = Math.max(20, terminal.getWidth());
+    int width = Math.max(20, terminal.getSize().getColumns());
     int end = Math.min(lines.size(), topLine + pageHeight);
     for (int i = topLine; i < end; i++) {
       String line = lines.get(i);
@@ -250,7 +250,7 @@ class LessCommand implements Runnable {
         "Press any key to return"
     );
 
-    int width = Math.max(20, terminal.getWidth());
+    int width = Math.max(20, terminal.getSize().getColumns());
     for (String line : helpLines) {
       if (line.length() > width) {
         shell.out().println(line.substring(0, width));

@@ -12,7 +12,7 @@ import org.xipki.codec.asn1.Asn1Sequence;
 import org.xipki.codec.asn1.Asn1TaggedObject;
 import org.xipki.codec.asn1.Asn1Util;
 import org.xipki.codec.asn1.PrimitiveType;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
+import org.xipki.codec.x509.AlgorithmIdentifier;
 import org.xipki.codec.asn1.Time;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
@@ -140,7 +140,7 @@ public class TBSCertList extends Asn1Encodable {
       this.extensions = extensions;
     }
 
-    public TBSCertList generateTBSCertList() throws CodecException {
+    public TBSCertList generateTBSCertList() {
       return new TBSCertList(signature, issuer, thisUpdate, nextUpdate, crlEntries, extensions);
     }
 

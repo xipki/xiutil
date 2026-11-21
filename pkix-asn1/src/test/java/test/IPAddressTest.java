@@ -5,8 +5,8 @@ package test;
 import org.junit.Assert;
 import org.junit.Test;
 import org.xipki.codec.Hex;
-import org.xipki.codec.ipadress.IPAddressFamily;
-import org.xipki.codec.ipadress.Rfc3779IPAddress;
+import org.xipki.codec.util.IPAddressFamily;
+import org.xipki.codec.util.Rfc3779IPAddress;
 
 /**
  * @author Lijun Liao (xipki)

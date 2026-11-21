@@ -6,10 +6,13 @@ package org.xipki.pkix;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xipki.asn1.pkcs10.CertificationRequest;
+import org.xipki.c509.csr.C509CertificationRequest;
+import org.xipki.codec.crypto.ContentVerifierFactory;
+import org.xipki.codec.c509.C509SubjectPublicKey;
+import org.xipki.codec.c509.id.ConstSignatureAlgorithm;
 import org.xipki.codec.exception.GenerationException;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
-import org.xipki.codec.crypto.ContentVerifierProvider;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.crypto.core.SignAlgo;
 import org.xipki.codec.util.Args;
@@ -19,14 +22,15 @@ import org.xipki.codec.json.JsonMap;
 import org.xipki.codec.json.JsonParser;
 import org.xipki.crypto.core.composite.CompositeMLDSAPublicKey;
 import org.xipki.crypto.core.composite.CompositeSigUtil;
+import org.xipki.pkix.cert.C509Cert;
 import org.xipki.pkix.cert.DHSigStaticKeyCertPair;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.sign.ConcurrentSigner;
 import org.xipki.pkix.sign.CsrControl;
 import org.xipki.pkix.sign.SignerConf;
 import org.xipki.pkix.sign.SignerFactoryRegister;
-import org.xipki.pkix.util.X509KeyUtil;
-import org.xipki.pkix.verify.AlgorithmValidator;
+import org.xipki.pkix.util.KeyUtil;
+import org.xipki.pkix.sign.AlgorithmValidator;
 import org.xipki.util.misc.LogUtil;
 import org.xipki.codec.util.IoUtil;
 
@@ -106,12 +110,30 @@ public class SecurityFactoryImpl implements SecurityFactory {
   @Override
   public ConcurrentSigner createSigner(String type, SignerConf conf, X509Cert[] certificateChain)
       throws GenerationException {
+    return createSigner(true, type, conf, certificateChain, null);
+  }
+
+  @Override
+  public ConcurrentSigner createSigner(String type, SignerConf conf, C509Cert[] certificateChain)
+      throws GenerationException {
+    return createSigner(false, type, conf, null, certificateChain);
+  }
+
+  private ConcurrentSigner createSigner(
+      boolean x509, String type, SignerConf conf,
+      X509Cert[] x509CertChain, C509Cert[] c509CertChain)
+      throws GenerationException {
     if (csrControl() != null && conf.peerCertificates() == null) {
-      conf.setPeerCertificates(csrControl().peerCerts());
+      conf.setPeerC509Certificates(csrControl().peerC509Certs());
     }
 
-    ConcurrentSigner signer = signerFactoryRegister.newSigner(
-        this, type, conf, certificateChain);
+    ConcurrentSigner signer;
+    if (x509) {
+      signer = signerFactoryRegister.newSigner(this, type, conf, x509CertChain);
+    } else {
+      signer = signerFactoryRegister.newSigner(this, type, conf, c509CertChain);
+    }
+
     if (signer.isMac()) {
       return signer;
     }
@@ -126,15 +148,21 @@ public class SecurityFactoryImpl implements SecurityFactory {
     }
 
     validateSigner(signer, type, conf);
-
     return signer;
   }
 
   @Override
-  public ContentVerifierProvider getContentVerifierProvider(
-      PublicKey publicKey, DHSigStaticKeyCertPair ownerKeyAndCert, SecretKey ownerMasterKey)
+  public ContentVerifierFactory getContentVerifierFactory(
+      PublicKey publicKey, DHSigStaticKeyCertPair.X509 ownerKeyAndCert, SecretKey ownerMasterKey)
       throws InvalidKeyException {
-    return X509KeyUtil.getContentVerifierProvider(publicKey, ownerKeyAndCert, ownerMasterKey);
+    return KeyUtil.getContentVerifierFactory(publicKey, ownerKeyAndCert, ownerMasterKey);
+  }
+
+  @Override
+  public ContentVerifierFactory getContentVerifierFactory(
+      PublicKey publicKey, DHSigStaticKeyCertPair.C509 ownerKeyAndCert, SecretKey ownerMasterKey)
+      throws InvalidKeyException {
+    return KeyUtil.getContentVerifierFactory(publicKey, ownerKeyAndCert, ownerMasterKey);
   }
 
   @Override
@@ -148,9 +176,18 @@ public class SecurityFactoryImpl implements SecurityFactory {
   }
 
   @Override
+  public PublicKey generatePublicKey(C509SubjectPublicKey subjectPublicKeyInfo) throws InvalidKeyException {
+    try {
+      return KeyInfoUtil.getPublicKey(subjectPublicKeyInfo);
+    } catch (InvalidKeySpecException ex) {
+      throw new InvalidKeyException(ex.getMessage(), ex);
+    }
+  }
+
+  @Override
   public boolean verifyPop(
       CertificationRequest csr, AlgorithmValidator algoValidator,
-      DHSigStaticKeyCertPair ownerKeyAndCert, SecretKey ownerMasterKey) {
+      DHSigStaticKeyCertPair.X509 ownerKeyAndCert, SecretKey ownerMasterKey) {
     if (algoValidator == null) {
       algoValidator = AlgorithmValidator.INSTANCE;
     }
@@ -173,13 +210,45 @@ public class SecurityFactoryImpl implements SecurityFactory {
 
     try {
       PublicKey pk = KeyInfoUtil.getPublicKey(pkInfo);
-      ContentVerifierProvider cvp = getContentVerifierProvider(pk, ownerKeyAndCert, ownerMasterKey);
+      ContentVerifierFactory cvp = getContentVerifierFactory(pk, ownerKeyAndCert, ownerMasterKey);
       return csr.isSignatureValid(cvp);
     } catch (InvalidKeyException | InvalidKeySpecException | SignatureException ex) {
       LogUtil.error(LOG, ex, "could not validate POP of CSR");
       return false;
     }
   } // method verifyPop
+
+  @Override
+  public boolean verifyPop(C509CertificationRequest csr, AlgorithmValidator algoValidator,
+                           DHSigStaticKeyCertPair.C509 ownerKeyAndCert, SecretKey ownerMasterKey) {
+    if (algoValidator == null) {
+      algoValidator = AlgorithmValidator.INSTANCE;
+    }
+
+    int algId = csr.body().signatureAlgorithm();
+    if (!algoValidator.isC509AlgorithmPermitted(algId)) {
+      String algoName;
+      try {
+        algoName = SignAlgo.ofC509AlgorithmIdentifier(algId).jceName();
+      } catch (Exception ex) {
+        algoName = ConstSignatureAlgorithm.describe(algId);
+      }
+
+      LOG.error("POP signature algorithm {} not permitted", algoName);
+      return false;
+    }
+
+    C509SubjectPublicKey pkInfo = csr.body().subjectPublicKey();
+
+    try {
+      PublicKey pk = KeyInfoUtil.getPublicKey(pkInfo);
+      ContentVerifierFactory cvp = getContentVerifierFactory(pk, ownerKeyAndCert, ownerMasterKey);
+      return csr.verify(cvp);
+    } catch (InvalidKeyException | InvalidKeySpecException | SignatureException ex) {
+      LogUtil.error(LOG, ex, "could not validate POP of CSR");
+      return false;
+    }
+  }
 
   @Override
   public int dfltSignerParallelism() {
@@ -202,7 +271,7 @@ public class SecurityFactoryImpl implements SecurityFactory {
       PublicKey publicKey = signer.publicKey();
       SignAlgo signatureAlgo = signer.algorithm();
       byte[] dummyContent = new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-      byte[] signatureValue = signer.x509Sign(dummyContent);
+      byte[] signatureValue = signer.atomicX509Sign(dummyContent);
 
       boolean valid;
       if (publicKey instanceof CompositeMLDSAPublicKey) {

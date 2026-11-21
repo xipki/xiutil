@@ -13,8 +13,8 @@ import org.xipki.asn1.tcg.TCGSpecificationVersion;
 import org.xipki.asn1.tcg.Traits;
 import org.xipki.asn1.x500.DirectoryString;
 import org.xipki.codec.asn1.*;
-import org.xipki.codec.asn1.oid.AttributeOIDs;
-import org.xipki.codec.asn1.oid.TcgOIDs;
+import org.xipki.codec.x509.id.AttributeOIDs;
+import org.xipki.codec.x509.id.TcgOIDs;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 

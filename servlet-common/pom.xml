@@ -19,7 +19,7 @@
     </dependency>
     <dependency>
       <groupId>org.xipki.crypto</groupId>
-      <artifactId>codec</artifactId>
+      <artifactId>crypto-codec</artifactId>
       <version>${xicrypto.version}</version>
       <scope>provided</scope>
     </dependency>

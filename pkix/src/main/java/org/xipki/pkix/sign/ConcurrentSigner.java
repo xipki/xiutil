@@ -3,21 +3,23 @@
 
 package org.xipki.pkix.sign;
 
+import org.xipki.c509.sign.C509ExtendedSigner;
+import org.xipki.codec.crypto.AtomicContentSigner;
 import org.xipki.crypto.core.SignAlgo;
 import org.xipki.crypto.core.XiSecurityException;
+import org.xipki.pkix.cert.C509Cert;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.util.exception.NoIdleSignerException;
 
 import java.security.Key;
 import java.security.PublicKey;
-import java.security.SignatureException;
 
 /**
  * Concurrent Signer interface.
  *
  * @author Lijun Liao (xipki)
  */
-public interface ConcurrentSigner {
+public interface ConcurrentSigner extends AtomicContentSigner {
 
   String name();
 
@@ -49,7 +51,7 @@ public interface ConcurrentSigner {
   X509Cert x509Cert();
 
   /**
-   * Set the CertificateChain.
+   * Set the X509 CertificateChain.
    *
    * @param certchain
    *          Certificate chain of this signer. Could be {@code null}.
@@ -57,6 +59,18 @@ public interface ConcurrentSigner {
   void setX509CertChain(X509Cert[] certchain);
 
   X509Cert[] x509CertChain();
+
+  C509Cert c509Cert();
+
+  /**
+   * Set the C509 CertificateChain.
+   *
+   * @param certchain
+   *          Certificate chain of this signer. Could be {@code null}.
+   */
+  void setC509CertChain(C509Cert[] certchain);
+
+  C509Cert[] c509CertChain();
 
   /**
    * Initializes me.
@@ -66,30 +80,6 @@ public interface ConcurrentSigner {
    *         if error during the initialization occurs.
    */
   void initialize(String conf) throws XiSecurityException;
-
-  /**
-   * Sign the data.
-   * @param data
-   *          Data to be signed. Must not be {@code null}.
-   * @return the signature
-   * @throws NoIdleSignerException
-   *         If no idle signer is available
-   * @throws SignatureException
-   *         If could not sign the data.
-   */
-  byte[] x509Sign(byte[] data) throws NoIdleSignerException, SignatureException;
-
-  /**
-   * Sign the data.
-   * @param data
-   *          Data to be signed. Must not be {@code null}.
-   * @return the signature
-   * @throws NoIdleSignerException
-   *         If no idle signer is available
-   * @throws SignatureException
-   *         If could not sign the data.
-   */
-  byte[][] x509Sign(byte[][] data) throws NoIdleSignerException, SignatureException;
 
   /**
    * Borrows a signer with implementation-dependent default timeout.
@@ -113,4 +103,7 @@ public interface ConcurrentSigner {
   boolean isHealthy();
 
   void close();
+
+  C509ExtendedSigner asC509Signer();
+
 }

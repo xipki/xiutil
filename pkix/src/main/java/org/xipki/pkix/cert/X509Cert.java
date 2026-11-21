@@ -9,10 +9,9 @@ import org.xipki.asn1.x509.Certificate;
 import org.xipki.asn1.x509.Extension;
 import org.xipki.asn1.x509.GeneralNames;
 import org.xipki.codec.asn1.Asn1Oid;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
-import org.xipki.codec.asn1.oid.ExtensionOIDs;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.id.ExtensionOIDs;
 import org.xipki.crypto.core.KeyInfoUtil;
-import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.Hex;
 import org.xipki.codec.util.ToStringUtil;
@@ -83,9 +82,18 @@ public class X509Cert {
     this(cert, null);
   }
 
-  public X509Cert(Certificate cert, byte[] encoded) throws CodecException {
-    this.cert = Args.notNull(cert, "certHolder");
-    cert.expandDetails();
+  public X509Cert(Certificate certificate, byte[] encoded) throws CodecException {
+    if (certificate != null) {
+      certificate.expandDetails();
+      this.cert = certificate;
+      this.encoded = (encoded == null) ? cert.getEncoded() : encoded;
+    } else if (encoded != null) {
+      this.encoded = encoded;
+      this.cert = Certificate.fromEncoded(encoded);
+    } else {
+      throw new IllegalArgumentException("cert and encoded cannot be both null");
+    }
+
     this.notBefore = cert.notBefore();
     this.notAfter = cert.notAfter();
     this.serialNumber = cert.serialNumber();
@@ -115,7 +123,6 @@ public class X509Cert {
     extn = getExtension(ExtensionOIDs.keyUsage);
     keyUsage = (extn == null) ? null : extn.getKeyUsage();
 
-    this.encoded = (encoded == null) ? cert.getEncoded() : encoded;
     this.sha256fp = HashAlgo.SHA256.hash(this.encoded);
     this.hashCode = Arrays.hashCode(this.sha256fp);
 
@@ -124,8 +131,7 @@ public class X509Cert {
     subjectKeyId = (extn == null) ? null : extn.getSubjectKeyIdentifier().getKeyIdentifier();
 
     extn = getExtension(ExtensionOIDs.authorityKeyIdentifier);
-    authorityKeyId = (extn == null) ? null : extn.getAuthorityKeyIdentifier()
-        .getKeyIdentifierOctets();
+    authorityKeyId = (extn == null) ? null : extn.getAuthorityKeyIdentifier().keyIdentifier();
   }
 
   public Certificate getCert() {
@@ -203,7 +209,7 @@ public class X509Cert {
     return subjectKeyId;
   }
 
-  public byte[] authorityKeyId() throws CodecException {
+  public byte[] authorityKeyId() {
     return authorityKeyId;
   }
 
@@ -216,7 +222,7 @@ public class X509Cert {
 
   public String issuerText() {
     if (issuerText == null) {
-      issuerText = X509Util.x500NameText(subject);
+      issuerText = X509Util.x500NameText(issuer);
     }
     return issuerText;
   }
@@ -256,7 +262,7 @@ public class X509Cert {
         SignAlgo.ofAlgorithmIdentifier(cert.getSignatureAlgorithm()))
         .orElseThrow(() -> new NoSuchAlgorithmException("could not detect SignAlgo"));
     Signature signature = signAlgo.newSignature();
-    checkBcSignature(key, signature);
+    checkSignature(key, signature);
   }
 
   private void verifyComposite(CompositeMLDSAPublicKey key)
@@ -274,7 +280,7 @@ public class X509Cert {
     }
   }
 
-  private void checkBcSignature(PublicKey key, Signature signature)
+  private void checkSignature(PublicKey key, Signature signature)
       throws CertificateException, SignatureException, InvalidKeyException {
     if (!cert.getSignatureAlgorithm().equals(cert.getTBSCertificate().getSignature())) {
       throw new CertificateException("signature algorithm in TBS cert not same as outer cert");
@@ -303,7 +309,11 @@ public class X509Cert {
 
   @Override
   public boolean equals(Object obj) {
-    return obj == this || obj instanceof X509Cert
+    if (this == obj) {
+      return true;
+    }
+
+    return obj instanceof X509Cert
         && Arrays.equals(sha256fp, ((X509Cert) obj).sha256fp);
   }
 

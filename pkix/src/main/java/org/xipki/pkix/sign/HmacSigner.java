@@ -3,7 +3,7 @@
 
 package org.xipki.pkix.sign;
 
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
+import org.xipki.codec.x509.AlgorithmIdentifier;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.util.Args;
 import org.xipki.crypto.api.CryptoApi;
@@ -73,13 +73,13 @@ public class HmacSigner implements Signer {
   private final class MyContentSigner implements ContentSigner {
 
     @Override
-    public AlgorithmIdentifier getAlgorithmIdentifier() {
+    public AlgorithmIdentifier x509Algorithm() {
       return algorithm.algorithmIdentifier();
     }
 
     @Override
-    public Integer getC509AlgorithmIdentifier() {
-      return algorithm.c509AlgorithmIdentifier();
+    public int c509Algorithm() {
+      return ContentSigner.checkC509AlgId(algorithm.c509AlgorithmIdentifier(), algorithm);
     }
 
     @Override
@@ -89,7 +89,7 @@ public class HmacSigner implements Signer {
     }
 
     @Override
-    public byte[] getSignature() {
+    public byte[] getX509Signature() {
       return hmac.doFinal();
     }
 

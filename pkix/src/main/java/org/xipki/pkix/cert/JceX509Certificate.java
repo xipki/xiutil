@@ -11,7 +11,7 @@ import org.xipki.asn1.x509.KeyUsage;
 import org.xipki.asn1.x509.TBSCertificate;
 import org.xipki.codec.asn1.Asn1Encodable;
 import org.xipki.codec.asn1.Asn1Oid;
-import org.xipki.codec.asn1.oid.ExtensionOIDs;
+import org.xipki.codec.x509.id.ExtensionOIDs;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.codec.util.Args;
 import org.xipki.crypto.core.SignAlgo;

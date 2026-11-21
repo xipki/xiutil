@@ -11,12 +11,12 @@ import org.xipki.asn1.x500.AttributeTypeAndValue;
 import org.xipki.asn1.x500.RDN;
 import org.xipki.asn1.x500.X500Name;
 import org.xipki.codec.asn1.*;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
-import org.xipki.codec.asn1.oid.AttributeOIDs;
-import org.xipki.codec.asn1.oid.ExtensionOIDs;
-import org.xipki.codec.asn1.oid.SpdmOIDs;
-import org.xipki.codec.asn1.oid.TcgOIDs;
-import org.xipki.codec.asn1.oid.X509OIDs;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.id.AttributeOIDs;
+import org.xipki.codec.x509.id.ExtensionOIDs;
+import org.xipki.codec.x509.id.SpdmOIDs;
+import org.xipki.codec.x509.id.TcgOIDs;
+import org.xipki.codec.x509.id.X509OIDs;
 import org.xipki.codec.util.StringUtil;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.Base64;
@@ -31,7 +31,7 @@ import org.xipki.pkix.cert.KeyUsage;
 import org.xipki.util.misc.PemEncoder;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.cert.X509Crl;
-import org.xipki.codec.ConfPairs;
+import org.xipki.codec.util.ConfPairs;
 import org.xipki.codec.exception.InvalidConfException;
 import org.xipki.codec.util.IoUtil;
 import org.xipki.util.exception.PkixException;
@@ -442,7 +442,7 @@ public class X509Util {
     return certChain.toArray(new X509Cert[0]);
   } // method buildCertPath
 
-  public static String encodeCertificates(X509Cert[] certchain) {
+  public static String encodePemCertificates(X509Cert[] certchain) {
     if (CollectionUtil.isEmpty(certchain)) {
       return null;
     }
@@ -451,10 +451,10 @@ public class X509Util {
     for (int i = 0; i < certchain.length; i++) {
       certchainBytes[i] = certchain[i].getEncoded();
     }
-    return encodeCertificates(certchainBytes);
+    return encodePemCertificates(certchainBytes);
   }
 
-  public static String encodeCertificates(byte[][] certchain) {
+  public static String encodePemCertificates(byte[][] certchain) {
     if (CollectionUtil.isEmpty(certchain)) {
       return null;
     }
@@ -466,7 +466,7 @@ public class X509Util {
     return sb.toString();
   }
 
-  public static List<X509Cert> listCertificates(String encodedCerts)
+  public static List<X509Cert> listPemCertificates(String encodedCerts)
       throws CertificateException, IOException {
     List<X509Cert> certs = new LinkedList<>();
     try (BufferedReader reader = new BufferedReader(new StringReader(encodedCerts));
@@ -527,12 +527,7 @@ public class X509Util {
     boolean issues = issuerCert.subject().equals(cert.issuer());
     if (issues) {
       byte[] ski = issuerCert.subjectKeyId();
-      byte[] aki;
-      try {
-        aki = cert.authorityKeyId();
-      } catch (CodecException e) {
-        return false;
-      }
+      byte[] aki = cert.authorityKeyId();
       if (ski != null && aki != null) {
         issues = Arrays.equals(ski, aki);
       }

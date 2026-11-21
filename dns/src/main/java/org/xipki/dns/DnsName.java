@@ -140,8 +140,11 @@ public final class DnsName {
 
   @Override
   public boolean equals(Object obj) {
-    return obj == this
-        || (obj instanceof DnsName && Arrays.deepEquals(labels, ((DnsName) obj).labels));
+    if (this == obj) {
+      return true;
+    }
+
+    return obj instanceof DnsName && Arrays.deepEquals(labels, ((DnsName) obj).labels);
   }
 
   @Override

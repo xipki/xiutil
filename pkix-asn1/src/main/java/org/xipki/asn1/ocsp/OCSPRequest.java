@@ -8,9 +8,9 @@ import org.xipki.codec.asn1.Asn1Encodable;
 import org.xipki.codec.asn1.Asn1Primitive;
 import org.xipki.codec.asn1.Asn1Sequence;
 import org.xipki.codec.asn1.Asn1TaggedObject;
+import org.xipki.codec.crypto.ContentVerifierFactory;
 import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.crypto.ContentVerifier;
-import org.xipki.codec.crypto.ContentVerifierProvider;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 
@@ -82,7 +82,7 @@ public class OCSPRequest extends Asn1Encodable {
     return deleteLastNewLine(buf);
   }
 
-  public boolean isSignatureValid(ContentVerifierProvider verifierProvider)
+  public boolean isSignatureValid(ContentVerifierFactory verifierFactory)
       throws SignatureException {
     if (optionalSignature == null) {
       throw new SignatureException("attempt to verify signature on unsigned object");
@@ -90,11 +90,11 @@ public class OCSPRequest extends Asn1Encodable {
 
     ContentVerifier verifier;
     try {
-      verifier = verifierProvider.get(optionalSignature.getSignatureAlgorithm());
+      verifier = verifierFactory.get(optionalSignature.getSignatureAlgorithm());
     } catch (GenerationException e) {
       throw new SignatureException(e.getMessage(), e);
     }
-    return verifier.atomicVerify(tbsRequest.getEncoded(), optionalSignature.signature());
+    return verifier.atomicX509Verify(tbsRequest.getEncoded(), optionalSignature.signature());
   }
 
 }

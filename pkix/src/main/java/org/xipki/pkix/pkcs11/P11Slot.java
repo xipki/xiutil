@@ -9,13 +9,17 @@ import org.xipki.codec.asn1.Asn1OctetString;
 import org.xipki.codec.asn1.Asn1Oid;
 import org.xipki.codec.asn1.Asn1Primitive;
 import org.xipki.codec.asn1.Asn1TaggedObject;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.ECPrivateKey;
-import org.xipki.codec.asn1.crypto.PrivateKeyInfo;
-import org.xipki.codec.asn1.crypto.RSAPrivateKey;
-import org.xipki.codec.asn1.crypto.RSAPublicKey;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
-import org.xipki.codec.asn1.oid.AlgorithmOIDs;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.ECPrivateKey;
+import org.xipki.codec.x509.PrivateKeyInfo;
+import org.xipki.codec.x509.RSAPrivateKey;
+import org.xipki.codec.x509.RSAPublicKey;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.id.AlgorithmOIDs;
+import org.xipki.codec.c509.C509BytesSubjectPublicKey;
+import org.xipki.codec.c509.C509ECSubjectPublicKey;
+import org.xipki.codec.c509.C509RSASubjectPublicKey;
+import org.xipki.codec.c509.C509SubjectPublicKey;
 import org.xipki.codec.util.StringUtil;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.codec.util.Args;
@@ -32,8 +36,8 @@ import org.xipki.pkcs11.wrapper.type.CkSlotInfo;
 import org.xipki.pkcs11.wrapper.type.CkTokenInfo;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.XiSecurityException;
-import org.xipki.pkix.pkcs11.P11ModuleConf.P11MechanismFilter;
 import org.xipki.pkix.cert.KeyInfoPair;
+import org.xipki.pkix.pkcs11.P11ModuleConf.P11MechanismFilter;
 import org.xipki.crypto.core.EcCurveEnum;
 import org.xipki.pkix.util.KeyUtil;
 import org.xipki.util.misc.LogUtil;
@@ -291,7 +295,15 @@ public class P11Slot implements Closeable {
    * @throws XiSecurityException
    *         if exception occurs.
    */
-  public KeyInfoPair generateKeyPairOtf(KeySpec keySpec) throws XiSecurityException {
+  public KeyInfoPair.X509 generateKeyPairOtf(KeySpec keySpec) throws XiSecurityException {
+    return (KeyInfoPair.X509) doGenerateKeyPairOtf(true, keySpec);
+  }
+
+  public KeyInfoPair.C509 generateC509KeyPairOtf(KeySpec keySpec) throws XiSecurityException {
+    return (KeyInfoPair.C509) doGenerateKeyPairOtf(false, keySpec);
+  }
+
+  private Object doGenerateKeyPairOtf(boolean x509, KeySpec keySpec) throws XiSecurityException {
     PKCS11KeyId keypair = null;
 
     try {
@@ -310,9 +322,15 @@ public class P11Slot implements Closeable {
                 attrs.privateExponent(), attrs.prime1(), attrs.prime2(),
                 attrs.exponent1(), attrs.exponent2(), attrs.coefficient())
             .toAsn1Primitive());
-        SubjectPublicKeyInfo pubKeyInfo = new SubjectPublicKeyInfo(ALGID_RSA,
-            new RSAPublicKey(attrs.modulus(), attrs.publicExponent()));
-        return new KeyInfoPair(pubKeyInfo, priKeyInfo);
+        if (x509) {
+          SubjectPublicKeyInfo pubKeyInfo = new SubjectPublicKeyInfo(ALGID_RSA,
+              new RSAPublicKey(attrs.modulus(), attrs.publicExponent()));
+          return new KeyInfoPair.X509(pubKeyInfo, priKeyInfo);
+        } else {
+          C509RSASubjectPublicKey pubKeyInfo =
+              new C509RSASubjectPublicKey(attrs.modulus(), attrs.publicExponent());
+          return new KeyInfoPair.C509(pubKeyInfo, priKeyInfo);
+        }
       } else if (keySpec.isWeierstrassEC() || keySpec.isEdwardsEC() || keySpec.isMontgomeryEC()) {
         byte[] ecPoint = token.getAttrValues(keypair.getPublicKeyHandle(),
             new AttributeTypes().ecPoint()).ecPoint();
@@ -337,7 +355,22 @@ public class P11Slot implements Closeable {
               .toAsn1Primitive());
         }
 
-        return new KeyInfoPair(new SubjectPublicKeyInfo(algId, ecPoint), priKeyInfo);
+        if (x509) {
+          return new KeyInfoPair.X509(new SubjectPublicKeyInfo(algId, ecPoint), priKeyInfo);
+        } else {
+          Integer c509AlgId = keySpec.c509AlgId();
+          if (c509AlgId == null) {
+            throw new XiSecurityException("unknown C509 algorithm " + keySpec);
+          }
+
+          C509SubjectPublicKey publicKeyInfo;
+          if (keySpec.isWeierstrassEC()) {
+            publicKeyInfo = new C509ECSubjectPublicKey(c509AlgId, ecPoint);
+          } else {
+            publicKeyInfo = new C509BytesSubjectPublicKey(c509AlgId, ecPoint);
+          }
+          return new KeyInfoPair.C509(publicKeyInfo, priKeyInfo);
+        }
       } else if (keySpec.isMldsa() || keySpec.isMlkem()) {
         long parameterSet = token.getAttrValues(keypair.getPublicKeyHandle(),
                 new AttributeTypes().parameterSet().value()).parameterSet();
@@ -384,7 +417,17 @@ public class P11Slot implements Closeable {
         byte[] pkValue = token.getAttrValues(keypair.getPublicKeyHandle(),
                             new AttributeTypes().value()).value();
 
-        return new KeyInfoPair(new SubjectPublicKeyInfo(algId, pkValue), priKeyInfo);
+        if (x509) {
+          return new KeyInfoPair.X509(new SubjectPublicKeyInfo(algId, pkValue), priKeyInfo);
+        } else {
+          Integer c509AlgId = keySpec.c509AlgId();
+          if (c509AlgId == null) {
+            throw new XiSecurityException("unknown C509 algorithm " + keySpec);
+          }
+
+          C509SubjectPublicKey publicKeyInfo = new C509BytesSubjectPublicKey(c509AlgId, pkValue);
+          return new KeyInfoPair.C509(publicKeyInfo, priKeyInfo);
+        }
       } else {
         throw new XiSecurityException("unsupported keySpec " + keySpec);
       }

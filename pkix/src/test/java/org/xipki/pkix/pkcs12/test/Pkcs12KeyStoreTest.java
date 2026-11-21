@@ -20,16 +20,16 @@ import org.xipki.asn1.pkcs12.SafeBag;
 import org.xipki.asn1.pkcs12.SafeContents;
 import org.xipki.asn1.x509.Certificate;
 import org.xipki.crypto.core.XiSecurityException;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.PrivateKeyInfo;
-import org.xipki.codec.asn1.oid.AlgorithmOIDs;
-import org.xipki.codec.asn1.oid.PkcsOIDs;
-import org.xipki.codec.asn1.crypto.DigestInfo;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.PrivateKeyInfo;
+import org.xipki.codec.x509.id.AlgorithmOIDs;
+import org.xipki.codec.x509.id.PkcsOIDs;
+import org.xipki.codec.x509.DigestInfo;
 import org.xipki.codec.asn1.Asn1OctetString;
 import org.xipki.codec.Hex;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.cert.test.TestUtil;
-import org.xipki.pkix.pkcs12.KeypairWithCert;
+import org.xipki.pkix.pkcs12.X509KeypairWithCert;
 import org.xipki.pkix.pkcs12.Pkcs12KeyStore;
 import org.xipki.pkix.pkcs12.Pkcs12Pbe;
 import org.xipki.pkix.util.PKCS8Encryptor;
@@ -301,14 +301,14 @@ public class Pkcs12KeyStoreTest {
     Assert.assertTrue(ks.isKeyEntry("keyonly"));
     Assert.assertArrayEquals(read("openssl/ee-key.der"), ks.getKey("keyonly").getEncoded());
     Assert.assertNull(ks.getCertificate("keyonly"));
-    Assert.assertEquals(Collections.emptyList(), ks.getCertificateChain("keyonly"));
+    Assert.assertEquals(null, ks.getCertificateChain("keyonly"));
 
     Pkcs12KeyStore ks2 = roundTrip(ks, PWD_1234);
     Assert.assertEquals(snapshot(ks), snapshot(ks2));
   }
 
   /**
-   * KeypairWithCert with a key without certificate in the keystore: works with an external
+   * X509KeypairWithCert with a key without certificate in the keystore: works with an external
    * certificate chain, otherwise a clear error (not a NullPointerException).
    */
   @Test
@@ -317,13 +317,13 @@ public class Pkcs12KeyStoreTest {
     X509Cert eeCert = new X509Cert(
         Certificate.fromEncoded(read("openssl/ee-cert.der")));
 
-    KeypairWithCert kp =
-        KeypairWithCert.fromKeystore(ks, "keyonly", PWD_1234,
+    X509KeypairWithCert kp =
+        X509KeypairWithCert.fromKeystore(ks, "keyonly", PWD_1234,
             new X509Cert[]{eeCert});
-    Assert.assertEquals(eeCert, kp.x509CertChain()[0]);
+    Assert.assertEquals(eeCert, kp.certChain()[0]);
 
     try {
-      KeypairWithCert.fromKeystore(ks, "keyonly", PWD_1234, null);
+      X509KeypairWithCert.fromKeystore(ks, "keyonly", PWD_1234, null);
       Assert.fail("XiSecurityException expected");
     } catch (XiSecurityException e) {
       Assert.assertTrue(e.getMessage(), e.getMessage().contains("no certificate for key"));

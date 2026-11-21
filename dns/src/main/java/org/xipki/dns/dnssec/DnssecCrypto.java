@@ -5,11 +5,11 @@ package org.xipki.dns.dnssec;
 
 import org.xipki.codec.asn1.Asn1Integer;
 import org.xipki.codec.asn1.Asn1Sequence;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.RSAPublicKey;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
-import org.xipki.codec.asn1.oid.AlgorithmOIDs;
-import org.xipki.codec.asn1.oid.CurveOIDs;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.RSAPublicKey;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.id.AlgorithmOIDs;
+import org.xipki.codec.x509.id.CurveOIDs;
 import org.xipki.crypto.core.HashAlgo;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.crypto.core.SignAlgo;

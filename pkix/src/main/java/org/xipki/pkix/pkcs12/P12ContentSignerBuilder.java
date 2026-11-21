@@ -10,6 +10,7 @@ import org.xipki.crypto.core.SignAlgo;
 import org.xipki.crypto.core.composite.CompositeMLDSAPrivateKey;
 import org.xipki.crypto.core.composite.CompositeSigSuite;
 import org.xipki.crypto.core.XiSecurityException;
+import org.xipki.pkix.cert.C509Cert;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.sign.ConcurrentSigner;
 import org.xipki.pkix.sign.DfltConcurrentSigner;
@@ -38,23 +39,39 @@ public class P12ContentSignerBuilder {
 
   private final PublicKey publicKey;
 
-  private final X509Cert[] certificateChain;
+  private final X509Cert[] x509CertChain;
+
+  private final C509Cert[] c509CertChain;
 
   public P12ContentSignerBuilder(PrivateKey privateKey, PublicKey publicKey) {
     this.key = Args.notNull(privateKey, "privateKey");
     this.publicKey = Args.notNull(publicKey, "publicKey");
-    this.certificateChain = null;
+    this.x509CertChain = null;
+    this.c509CertChain = null;
   }
 
-  public P12ContentSignerBuilder(KeypairWithCert keypairWithCert) {
+  public P12ContentSignerBuilder(X509KeypairWithCert keypairWithCert) {
     this.key = Args.notNull(keypairWithCert, "keypairWithCert").getKey();
     this.publicKey = keypairWithCert.publicKey();
-    this.certificateChain = keypairWithCert.x509CertChain();
+    this.x509CertChain = keypairWithCert.certChain();
+    this.c509CertChain = null;
   }
 
-  public X509Cert certificate() {
-    return (certificateChain != null && certificateChain.length > 0)
-        ? certificateChain[0] : null;
+  public P12ContentSignerBuilder(C509KeypairWithCert keypairWithCert) {
+    this.key = Args.notNull(keypairWithCert, "keypairWithCert").getKey();
+    this.publicKey = keypairWithCert.publicKey();
+    this.x509CertChain = null;
+    this.c509CertChain = keypairWithCert.certChain();
+  }
+
+  public X509Cert x509Certificate() {
+    return (x509CertChain != null && x509CertChain.length > 0)
+        ? x509CertChain[0] : null;
+  }
+
+  public C509Cert c509Certificate() {
+    return (c509CertChain != null && c509CertChain.length > 0)
+        ? c509CertChain[0] : null;
   }
 
   public PrivateKey key() {
@@ -95,8 +112,10 @@ public class P12ContentSignerBuilder {
       throw new XiSecurityException(ex.getMessage(), ex);
     }
 
-    if (certificateChain != null) {
-      concurrentSigner.setX509CertChain(certificateChain);
+    if (x509CertChain != null) {
+      concurrentSigner.setX509CertChain(x509CertChain);
+    } else if (c509CertChain != null) {
+      concurrentSigner.setC509CertChain(c509CertChain);
     } else {
       concurrentSigner.setPublicKey(publicKey);
     }

@@ -3,7 +3,7 @@
 
 package org.xipki.pkix.pkcs12;
 
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
 import org.xipki.codec.util.Args;
 
 import java.security.KeyStore;

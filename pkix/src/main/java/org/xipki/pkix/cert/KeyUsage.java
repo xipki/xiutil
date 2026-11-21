@@ -3,6 +3,7 @@
 
 package org.xipki.pkix.cert;
 
+import org.xipki.c509.ext.C509KeyUsage;
 import org.xipki.codec.util.Args;
 
 /**
@@ -12,22 +13,34 @@ import org.xipki.codec.util.Args;
  */
 public enum KeyUsage {
 
-  digitalSignature(org.xipki.asn1.x509.KeyUsage.digitalSignature),
-  contentCommitment(org.xipki.asn1.x509.KeyUsage.nonRepudiation, "nonRepudiation"),
-  keyEncipherment(org.xipki.asn1.x509.KeyUsage.keyEncipherment),
-  dataEncipherment(org.xipki.asn1.x509.KeyUsage.dataEncipherment),
-  keyAgreement(org.xipki.asn1.x509.KeyUsage.keyAgreement),
-  keyCertSign(org.xipki.asn1.x509.KeyUsage.keyCertSign),
-  cRLSign(org.xipki.asn1.x509.KeyUsage.cRLSign),
-  encipherOnly(org.xipki.asn1.x509.KeyUsage.encipherOnly),
-  decipherOnly(org.xipki.asn1.x509.KeyUsage.decipherOnly);
+  digitalSignature(org.xipki.asn1.x509.KeyUsage.digitalSignature,
+      C509KeyUsage.DIGITAL_SIGNATURE),
+  contentCommitment(org.xipki.asn1.x509.KeyUsage.nonRepudiation,
+      C509KeyUsage.CONTENT_COMMITMENT, "nonRepudiation"),
+  keyEncipherment(org.xipki.asn1.x509.KeyUsage.keyEncipherment,
+      C509KeyUsage.KEY_ENCIPHERMENT),
+  dataEncipherment(org.xipki.asn1.x509.KeyUsage.dataEncipherment,
+      C509KeyUsage.DATA_ENCIPHERMENT),
+  keyAgreement(org.xipki.asn1.x509.KeyUsage.keyAgreement,
+      C509KeyUsage.KEY_AGREEMENT),
+  keyCertSign(org.xipki.asn1.x509.KeyUsage.keyCertSign,
+      C509KeyUsage.KEY_CERT_SIGN),
+  cRLSign(org.xipki.asn1.x509.KeyUsage.cRLSign,
+      C509KeyUsage.CRL_SIGN),
+  encipherOnly(org.xipki.asn1.x509.KeyUsage.encipherOnly,
+      C509KeyUsage.ENCIPHER_ONLY),
+  decipherOnly(org.xipki.asn1.x509.KeyUsage.decipherOnly,
+      C509KeyUsage.DECIPHER_ONLY);
 
   private final org.xipki.asn1.x509.KeyUsage asn1;
 
+  private final C509KeyUsage c509;
+
   private final String[] names;
 
-  KeyUsage(org.xipki.asn1.x509.KeyUsage asn1, String... aliases) {
+  KeyUsage(org.xipki.asn1.x509.KeyUsage asn1, C509KeyUsage c509, String... aliases) {
     this.asn1 = asn1;
+    this.c509 = c509;
     int len = aliases == null ? 1 : 1 + aliases.length;
     this.names = new String[len];
     this.names[0] = name();
@@ -38,6 +51,10 @@ public enum KeyUsage {
 
   public org.xipki.asn1.x509.KeyUsage asn1() {
     return asn1;
+  }
+
+  public C509KeyUsage c509() {
+    return c509;
   }
 
   public String getName() {

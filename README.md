@@ -3,7 +3,7 @@
 ASN.1 structures (including CMS, CMP and SCEP), certificates, signers and verifiers for Java.
 
 Part of the code is taken from [xipki/xipki](https://github.com/xipki/xipki). The ASN.1
-layer (`pkix-asn1`) is new and is built on the `codec` module of
+layer (`pkix-asn1`) is new and is built on the `crypto-codec` module of
 [xipki/xicrypto](https://github.com/xipki/xicrypto), not on BouncyCastle.
 
 ## Modules
@@ -15,7 +15,7 @@ layer (`pkix-asn1`) is new and is built on the `codec` module of
 | `pkix`       | `org.xipki.pkix:pkix`       | Higher-level PKIX API: X.509 certificates and CRLs, PKCS#11 and PKCS#12 key stores, signers and signature verifiers. |
 
 `pkix` depends on `pkix-asn1` and `pkix-util`; both of those depend only on
-`org.xipki.crypto:codec`.
+`org.xipki.crypto:crypto-codec`.
 
 ### pkix-asn1 packages
 

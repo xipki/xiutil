@@ -3,8 +3,9 @@
 
 package org.xipki.pkix.pkcs11;
 
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.c509.C509BytesSubjectPublicKey;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.crypto.DigestOutputStream;
 import org.xipki.codec.exception.GenerationException;
@@ -29,7 +30,9 @@ import org.xipki.crypto.core.composite.CompositeSigUtil;
 import org.xipki.crypto.core.KemUtil;
 import org.xipki.crypto.core.KemEncapKey;
 import org.xipki.crypto.core.XiSecurityException;
-import org.xipki.pkix.pkcs12.P12XdhMacSignerBuilder;
+import org.xipki.pkix.cert.C509Cert;
+import org.xipki.pkix.pkcs12.C509P12XdhMacSignerBuilder;
+import org.xipki.pkix.pkcs12.X509P12XdhMacSignerBuilder;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.sign.ConcurrentSigner;
 import org.xipki.pkix.sign.DfltConcurrentSigner;
@@ -101,6 +104,20 @@ public class P11SignerFactory implements SignerFactory {
   @Override
   public ConcurrentSigner newSigner(
       SecurityFactory securityFactory, String type, SignerConf conf, X509Cert[] certificateChain)
+      throws GenerationException {
+    return newSigner(securityFactory, type, conf, certificateChain, null);
+  }
+
+  @Override
+  public ConcurrentSigner newSigner(
+      SecurityFactory securityFactory, String type, SignerConf conf, C509Cert[] certificateChain)
+      throws GenerationException {
+    return newSigner(securityFactory, type, conf, null, certificateChain);
+  }
+
+  public ConcurrentSigner newSigner(
+      SecurityFactory securityFactory, String type, SignerConf conf,
+      X509Cert[] x509CertChain, C509Cert[] c509CertChain)
       throws GenerationException {
     if (!TYPE.equalsIgnoreCase(type)) {
       throw new GenerationException("unknown signer type " + type);
@@ -183,8 +200,17 @@ public class P11SignerFactory implements SignerFactory {
       } else {
         key = getKey(slot, keyId, keyLabel);
         if (key.key().id().getKeyType() == PKCS11T.CKK_EC_MONTGOMERY) {
+          if (x509CertChain != null && c509CertChain != null) {
+            throw new IllegalArgumentException(
+                "x509CertChain and c509CertChain cannot be both null for XDH PoP");
+          }
+
           // X25519, X448: cannot sign, proof of possession with a MAC (DH POP, RFC 6955)
-          return newXdhMacSigner(conf, key, certificateChain, parallelism);
+          if (c509CertChain != null) {
+            return newXdhMacSigner(conf, key, c509CertChain, parallelism);
+          } else {
+            return newXdhMacSigner(conf, key, x509CertChain, parallelism);
+          }
         }
 
         if (algo == null) {
@@ -194,8 +220,10 @@ public class P11SignerFactory implements SignerFactory {
 
       List<Signer> signers = new ArrayList<>(parallelism);
       PublicKey publicKey = null;
-      if (certificateChain != null && certificateChain.length > 0) {
-        publicKey = certificateChain[0].publicKey();
+      if (x509CertChain != null && x509CertChain.length > 0) {
+        publicKey = x509CertChain[0].publicKey();
+      } else if (c509CertChain != null && c509CertChain.length > 0) {
+        publicKey = c509CertChain[0].publicKey();
       }
 
       for (int i = 0; i < parallelism; i++) {
@@ -221,8 +249,10 @@ public class P11SignerFactory implements SignerFactory {
 
       DfltConcurrentSigner concurrentSigner = new DfltConcurrentSigner(algo.isMac(), signers);
 
-      if (certificateChain != null) {
-        concurrentSigner.setX509CertChain(certificateChain);
+      if (x509CertChain != null) {
+        concurrentSigner.setX509CertChain(x509CertChain);
+      } else if (c509CertChain != null) {
+        concurrentSigner.setC509CertChain(c509CertChain);
       } else {
         concurrentSigner.setPublicKey(key != null ? key.publicKey() : compositeKey.publicKey());
       }
@@ -246,7 +276,7 @@ public class P11SignerFactory implements SignerFactory {
    * computed in software.
    */
   private static ConcurrentSigner newXdhMacSigner(
-      SignerConf conf, P11Key key, X509Cert[] certificateChain, int parallelism)
+      SignerConf conf, P11Key key, X509Cert[] certChain, int parallelism)
       throws GenerationException, TokenException, XiSecurityException {
     KeySpec keySpec = key.keySpec();
     EcCurveEnum curve = (keySpec == KeySpec.X25519) ? EcCurveEnum.X25519
@@ -278,10 +308,64 @@ public class P11SignerFactory implements SignerFactory {
     byte[] zz = key.deriveKey(PKCS11T.CKM_ECDH1_DERIVE,
         new P11Params.P11Ecdh1DeriveParams(PKCS11T.CKD_NULL, null, peerPublicKey), zzLen);
 
-    PublicKey publicKey = (certificateChain != null && certificateChain.length > 0)
-        ? certificateChain[0].publicKey() : key.publicKey();
+    PublicKey publicKey;
+    if (certChain != null) {
+      publicKey = certChain[0].publicKey();
+    } else {
+      publicKey = key.publicKey();
+    }
+
     try {
-      return new P12XdhMacSignerBuilder(curve, zz, peerCert, publicKey, certificateChain)
+      return new X509P12XdhMacSignerBuilder(curve, zz, peerCert, publicKey, certChain)
+          .createSigner(parallelism);
+    } finally {
+      Arrays.fill(zz, (byte) 0);
+    }
+  }
+
+  private static ConcurrentSigner newXdhMacSigner(
+      SignerConf conf, P11Key key, C509Cert[] certChain, int parallelism)
+      throws GenerationException, TokenException, XiSecurityException {
+    KeySpec keySpec = key.keySpec();
+    EcCurveEnum curve = (keySpec == KeySpec.X25519) ? EcCurveEnum.X25519
+        : (keySpec == KeySpec.X448) ? EcCurveEnum.X448 : null;
+    if (curve == null) {
+      throw new GenerationException("unsupported key " + keySpec);
+    }
+
+    // peer certificate is needed
+    List<C509Cert> peerCerts = conf.peerC509Certificates();
+    if (peerCerts == null || peerCerts.isEmpty()) {
+      throw new GenerationException("no peer certificate is specified");
+    }
+
+    C509Cert peerCert = null;
+    for (C509Cert m : peerCerts) {
+      if (KeyInfoUtil.getCurve(m.publicKey()) == curve) {
+        peerCert = m;
+        break;
+      }
+    }
+
+    if (peerCert == null) {
+      throw new GenerationException("could not find peer certificate with " + curve + " key");
+    }
+
+    byte[] peerPublicKey = ((C509BytesSubjectPublicKey) peerCert.subjectPublicKeyInfo())
+        .publicKeyData();
+    int zzLen = (curve == EcCurveEnum.X25519) ? 32 : 56;
+    byte[] zz = key.deriveKey(PKCS11T.CKM_ECDH1_DERIVE,
+        new P11Params.P11Ecdh1DeriveParams(PKCS11T.CKD_NULL, null, peerPublicKey), zzLen);
+
+    PublicKey publicKey;
+    if (certChain != null) {
+      publicKey = certChain[0].publicKey();
+    } else {
+      publicKey = key.publicKey();
+    }
+
+    try {
+      return new C509P12XdhMacSignerBuilder(curve, zz, peerCert, publicKey, certChain)
           .createSigner(parallelism);
     } finally {
       Arrays.fill(zz, (byte) 0);
@@ -340,13 +424,13 @@ public class P11SignerFactory implements SignerFactory {
     private class MyX509Signer implements ContentSigner {
 
       @Override
-      public final AlgorithmIdentifier getAlgorithmIdentifier() {
+      public final AlgorithmIdentifier x509Algorithm() {
         return algoSuite.algId();
       }
 
       @Override
-      public final Integer getC509AlgorithmIdentifier() {
-        return algoSuite.c509AlgId();
+      public final int c509Algorithm() {
+        return ContentSigner.checkC509AlgId(algoSuite.c509AlgId(), algoSuite);
       }
 
       @Override
@@ -356,7 +440,7 @@ public class P11SignerFactory implements SignerFactory {
       }
 
       @Override
-      public byte[] getSignature() throws SignatureException {
+      public byte[] getX509Signature() throws SignatureException {
         byte[] digestValue = os.digest();
         byte[] m_ = CompositeSigUtil.buildM_(algoSuite, context, digestValue);
 
@@ -367,17 +451,17 @@ public class P11SignerFactory implements SignerFactory {
           throw new RuntimeException(e);
         }
 
-        byte[]  pqcSig =  pqcSigner.contentSigner().getSignature();
-        byte[] tradSig = tradSigner.contentSigner().getSignature();
+        byte[]  pqcSig =  pqcSigner.contentSigner().getX509Signature();
+        byte[] tradSig = tradSigner.contentSigner().getX509Signature();
         return XiArrays.concatenate(pqcSig, tradSig);
       }
 
       @Override
-      public byte[] atomicSign(byte[] toBeSignData) throws SignatureException {
+      public byte[] atomicX509Sign(byte[] toBeSignData) throws SignatureException {
         byte[] digestValue = algoSuite.ph().hash(toBeSignData);
         byte[] m_ = CompositeSigUtil.buildM_(algoSuite, context, digestValue);
-        byte[]  pqcSig =  pqcSigner.contentSigner().atomicSign(m_);
-        byte[] tradSig = tradSigner.contentSigner().atomicSign(m_);
+        byte[]  pqcSig =  pqcSigner.contentSigner().atomicX509Sign(m_);
+        byte[] tradSig = tradSigner.contentSigner().atomicX509Sign(m_);
         return XiArrays.concatenate(pqcSig, tradSig);
       }
 

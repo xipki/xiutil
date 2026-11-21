@@ -135,6 +135,10 @@ public class AcmeChallenge implements JsonEncodable {
 
   @Override
   public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+
     if (!(obj instanceof AcmeChallenge)) {
       return false;
     }

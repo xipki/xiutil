@@ -16,10 +16,10 @@ import org.xipki.codec.asn1.Asn1Primitive;
 import org.xipki.codec.asn1.Asn1Sequence;
 import org.xipki.codec.asn1.Asn1TaggedObject;
 import org.xipki.codec.asn1.Asn1Util;
-import org.xipki.codec.asn1.oid.ExtensionOIDs;
-import org.xipki.codec.asn1.oid.SpdmOIDs;
-import org.xipki.codec.asn1.oid.TcgOIDs;
-import org.xipki.codec.asn1.oid.X509OIDs;
+import org.xipki.codec.x509.id.ExtensionOIDs;
+import org.xipki.codec.x509.id.SpdmOIDs;
+import org.xipki.codec.x509.id.TcgOIDs;
+import org.xipki.codec.x509.id.X509OIDs;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 

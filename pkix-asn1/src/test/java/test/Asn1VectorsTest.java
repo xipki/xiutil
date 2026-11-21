@@ -26,11 +26,11 @@ import org.xipki.codec.asn1.Asn1Encodable;
 import org.xipki.codec.asn1.Asn1OctetString;
 import org.xipki.codec.asn1.Asn1Sequence;
 import org.xipki.codec.asn1.Asn1Oid;
-import org.xipki.codec.asn1.oid.CmsOIDs;
-import org.xipki.codec.asn1.oid.ExtensionOIDs;
-import org.xipki.codec.asn1.oid.PkcsOIDs;
-import org.xipki.codec.asn1.crypto.EncryptedPrivateKeyInfo;
-import org.xipki.codec.asn1.crypto.PrivateKeyInfo;
+import org.xipki.codec.x509.id.CmsOIDs;
+import org.xipki.codec.x509.id.ExtensionOIDs;
+import org.xipki.codec.x509.id.PkcsOIDs;
+import org.xipki.codec.x509.EncryptedPrivateKeyInfo;
+import org.xipki.codec.x509.PrivateKeyInfo;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.Hex;
 

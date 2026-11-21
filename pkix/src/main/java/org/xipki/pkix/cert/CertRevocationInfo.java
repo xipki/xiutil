@@ -7,7 +7,7 @@ import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.json.JsonEncodable;
 import org.xipki.codec.json.JsonMap;
-import org.xipki.codec.ConfPairs;
+import org.xipki.codec.util.ConfPairs;
 import org.xipki.codec.util.StringUtil;
 import org.xipki.util.misc.CompareUtil;
 
@@ -122,7 +122,7 @@ public class CertRevocationInfo implements JsonEncodable {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == this) {
+    if (this == obj) {
       return true;
     }
 

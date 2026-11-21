@@ -8,9 +8,11 @@ import org.xipki.codec.util.Args;
 import org.xipki.codec.Hex;
 import org.xipki.crypto.core.HashAlgo;
 import org.xipki.crypto.core.SignAlgo;
+import org.xipki.pkix.cert.C509Cert;
 import org.xipki.pkix.cert.X509Cert;
+import org.xipki.pkix.util.C509Util;
 import org.xipki.pkix.util.X509Util;
-import org.xipki.codec.ConfPairs;
+import org.xipki.codec.util.ConfPairs;
 import org.xipki.codec.exception.InvalidConfException;
 import org.xipki.util.misc.CollectionUtil;
 
@@ -51,6 +53,8 @@ public class SignerConf {
 
   private List<X509Cert> peerCertificates;
 
+  private List<C509Cert> peerC509Certificates;
+
   public SignerConf() {
     this.confPairs = new ConfPairs();
   }
@@ -66,6 +70,7 @@ public class SignerConf {
   public SignerConf copy() {
     SignerConf copy = new SignerConf(confPairs);
     copy.peerCertificates = peerCertificates;
+    copy.peerC509Certificates = peerC509Certificates;
     return copy;
   }
 
@@ -214,6 +219,14 @@ public class SignerConf {
     this.peerCertificates = peerCertificates;
   }
 
+  public List<C509Cert> peerC509Certificates() {
+    return peerC509Certificates;
+  }
+
+  public void setPeerC509Certificates(List<C509Cert> peerCertificates) {
+    this.peerC509Certificates = peerCertificates;
+  }
+
   @Override
   public String toString() {
     return toString(true, true);
@@ -238,6 +251,16 @@ public class SignerConf {
       for (int i = 0; i < peerCertificates.size(); i++) {
         sb.append("\ncert[").append(i).append("]:\n");
         sb.append(X509Util.formatCert(peerCertificates.get(i), verbose));
+      }
+    }
+
+    sb.append("\npeer C509 Certificates: ");
+    if (CollectionUtil.isEmpty(peerC509Certificates)) {
+      sb.append("null");
+    } else {
+      for (int i = 0; i < peerC509Certificates.size(); i++) {
+        sb.append("\ncert[").append(i).append("]:\n");
+        sb.append(C509Util.formatCert(peerC509Certificates.get(i), verbose));
       }
     }
 

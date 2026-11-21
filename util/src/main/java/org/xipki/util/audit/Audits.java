@@ -5,7 +5,7 @@ package org.xipki.util.audit;
 
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.json.JsonMap;
-import org.xipki.codec.ConfPairs;
+import org.xipki.codec.util.ConfPairs;
 import org.xipki.codec.util.ReflectiveUtil;
 import org.xipki.util.audit.services.EmbedAuditService;
 import org.xipki.util.audit.services.FileMacAuditService;

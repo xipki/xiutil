@@ -3,6 +3,7 @@
 
 package org.xipki.dns.dnssec;
 
+import org.xipki.codec.util.Args;
 import org.xipki.dns.DnsName;
 import org.xipki.dns.DnsRecord;
 import org.xipki.codec.Base64;
@@ -20,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 
 /**
  * File with trust anchors that is reloaded when its modification time or size changes.
@@ -43,7 +43,7 @@ public class TrustAnchorsFile {
   private long lastSize = -1;
 
   public TrustAnchorsFile(Path path) {
-    this.path = Objects.requireNonNull(path, "path");
+    this.path = Args.notNull(path, "path");
   }
 
   public Path path() {

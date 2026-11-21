@@ -3,6 +3,7 @@
 
 package org.xipki.pkix.auth;
 
+import org.xipki.pkix.cert.C509Cert;
 import org.xipki.pkix.cert.X509Cert;
 
 import java.util.Locale;
@@ -98,14 +99,25 @@ public interface Requestor {
   }
 
   /**
-   * Certificate-based requestor interface.
+   * X.509 Certificate-based requestor interface.
    */
-
-  interface CertRequestor extends Requestor {
+  interface X509CertRequestor extends Requestor {
 
     byte[] keyId();
 
     X509Cert cert();
+
+  }
+
+  /**
+   * C509 Certificate-based requestor interface.
+   */
+
+  interface C509CertRequestor extends Requestor {
+
+    byte[] keyId();
+
+    C509Cert cert();
 
   }
 

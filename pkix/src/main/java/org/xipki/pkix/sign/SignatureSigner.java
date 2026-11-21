@@ -4,7 +4,9 @@
 package org.xipki.pkix.sign;
 
 import org.xipki.codec.asn1.Asn1Util;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.c509.BytesSignatureValue;
+import org.xipki.codec.c509.SignatureValue;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.crypto.SignatureOutputStream;
 import org.xipki.crypto.core.KeyInfoUtil;
@@ -36,8 +38,7 @@ public class SignatureSigner implements Signer {
 
   private final ContentSigner signer;
 
-  public SignatureSigner(SignAlgo sigAlgo, Signature signer, PrivateKey key, byte[] context)
-      throws XiSecurityException {
+  public SignatureSigner(SignAlgo sigAlgo, Signature signer, PrivateKey key, byte[] context) {
     this(sigAlgo.algorithmIdentifier(), sigAlgo.c509AlgorithmIdentifier(), signer, key, context);
   }
 
@@ -60,15 +61,13 @@ public class SignatureSigner implements Signer {
   }
 
   public SignatureSigner(
-      AlgorithmIdentifier sigAlgId, Signature signer, PrivateKey key, byte[] context)
-      throws XiSecurityException {
+      AlgorithmIdentifier sigAlgId, Signature signer, PrivateKey key, byte[] context) {
     this(sigAlgId, getC509AlgId(sigAlgId), signer, key, context);
   }
 
   private SignatureSigner(
       AlgorithmIdentifier sigAlgId, Integer c509SigAlgId,
-      Signature signer, PrivateKey key, byte[] context)
-      throws XiSecurityException {
+      Signature signer, PrivateKey key, byte[] context) {
     Args.notNull(sigAlgId, "sigAlgId");
     Args.notNull(signer, "signer");
     Args.notNull(key, "key");
@@ -86,13 +85,13 @@ public class SignatureSigner implements Signer {
       private final SignatureOutputStream stream = new SignatureOutputStream(signer);
 
       @Override
-      public AlgorithmIdentifier getAlgorithmIdentifier() {
+      public AlgorithmIdentifier x509Algorithm() {
         return sigAlgId;
       }
 
       @Override
-      public Integer getC509AlgorithmIdentifier() {
-        return c509SigAlgId;
+      public int c509Algorithm() {
+        return ContentSigner.checkC509AlgId(c509SigAlgId, sigAlgId.getAlgorithm());
       }
 
       @Override
@@ -109,22 +108,20 @@ public class SignatureSigner implements Signer {
       }
 
       @Override
-      public byte[] getSignature() throws SignatureException {
+      public byte[] getX509Signature() throws SignatureException {
         return stream.getSignature();
       }
 
       @Override
-      public byte[] getC509Signature() throws SignatureException {
+      public SignatureValue getC509Signature() throws SignatureException {
+        c509Algorithm();
         return x509ToC509Sig(stream.getSignature());
       }
 
       @Override
-      public byte[] atomicC509Sign(byte[] dataToSign) throws SignatureException {
-        Integer algId = getC509AlgorithmIdentifier();
-        if (algId == null) {
-          throw new IllegalStateException("This signer is not C509 capable");
-        }
-        return x509ToC509Sig(atomicSign(dataToSign));
+      public SignatureValue atomicC509Sign(byte[] dataToSign) throws SignatureException {
+        c509Algorithm();
+        return x509ToC509Sig(atomicX509Sign(dataToSign));
       }
 
       /*
@@ -132,9 +129,9 @@ public class SignatureSigner implements Signer {
        * SEQUENCE { r INTEGER, s INTEGER }) to the plain format (r || s), where r and s
        * are of the length of the EC order. Signatures of other algorithms are unchanged.
        */
-      private byte[] x509ToC509Sig(byte[] x509Sig) throws SignatureException {
+      private SignatureValue x509ToC509Sig(byte[] x509Sig) throws SignatureException {
         if (!dsaSig) {
-          return x509Sig;
+          return new BytesSignatureValue(x509Sig);
         }
 
         if (ecOrderLen == 0) {
@@ -143,11 +140,11 @@ public class SignatureSigner implements Signer {
         }
 
         byte[] plainSig = Asn1Util.dsaSigX962ToPlain(x509Sig, ecOrderLen);
-        if (plainSig == x509Sig) {
+        if (Arrays.equals(plainSig, x509Sig)) {
           // dsaSigX962ToPlain returns the input if it is not a valid X9.62 signature.
           throw new SignatureException("invalid X9.62 DSA signature");
         }
-        return plainSig;
+        return new BytesSignatureValue(plainSig);
       }
     };
   }

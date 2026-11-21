@@ -3,10 +3,11 @@ package org.xipki.asn1.x509;
 
 import org.xipki.asn1.x500.X500Name;
 import org.xipki.codec.asn1.*;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
+import org.xipki.codec.crypto.AtomicContentSigner;
+import org.xipki.codec.x509.AlgorithmIdentifier;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.crypto.ContentVerifier;
-import org.xipki.codec.crypto.ContentVerifierProvider;
+import org.xipki.codec.crypto.ContentVerifierFactory;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.exception.GenerationException;
@@ -55,14 +56,13 @@ public class CertificateList extends Asn1Encodable {
     }
 
     public V2CRLBuilder addCRLEntry(
-        BigInteger certSerial, Instant revocationDate, CRLReason reason) throws CodecException {
+        BigInteger certSerial, Instant revocationDate, CRLReason reason) {
       tbsGen.addCRLEntry(certSerial, revocationDate, reason);
       return this;
     }
 
     public V2CRLBuilder addCRLEntry(
-        BigInteger certSerial, Instant revocationDate, CRLReason reason, Instant invalidityDate)
-        throws CodecException {
+        BigInteger certSerial, Instant revocationDate, CRLReason reason, Instant invalidityDate) {
       tbsGen.addCRLEntry(certSerial, revocationDate, reason, invalidityDate);
       return this;
     }
@@ -100,8 +100,8 @@ public class CertificateList extends Asn1Encodable {
       return this;
     }
 
-    public CertificateList build(ContentSigner signer) {
-      AlgorithmIdentifier sigAlgID = signer.getAlgorithmIdentifier();
+    public CertificateList build(AtomicContentSigner signer) {
+      AlgorithmIdentifier sigAlgID = signer.x509Algorithm();
       tbsGen.setSignature(sigAlgID);
 
       try {
@@ -109,7 +109,7 @@ public class CertificateList extends Asn1Encodable {
           tbsGen.setExtensions(extGenerator.build());
         }
         TBSCertList tbsCertList = tbsGen.generateTBSCertList();
-        byte[] signature = signer.atomicSign(tbsCertList.getEncoded());
+        byte[] signature = signer.atomicX509Sign(tbsCertList.getEncoded());
         return new CertificateList(tbsCertList, sigAlgID, new Asn1BitString(signature));
       } catch (SignatureException | CodecException e) {
         throw new IllegalArgumentException("cannot produce CRL signature", e);
@@ -268,11 +268,11 @@ public class CertificateList extends Asn1Encodable {
     return deleteLastNewLine(buf);
   }
 
-  public boolean isSignatureValid(ContentVerifierProvider verifierProvider)
+  public boolean isSignatureValid(ContentVerifierFactory verifierFactory)
       throws OperatorException {
     try {
-      ContentVerifier verifier = verifierProvider.get(tbsCertList.getSignature());
-      return verifier.atomicVerify(tbsCertList.getEncoded(), signatureValue.getAlignedOctets());
+      ContentVerifier verifier = verifierFactory.get(tbsCertList.getSignature());
+      return verifier.atomicX509Verify(tbsCertList.getEncoded(), signatureValue.getAlignedOctets());
     } catch (Exception e) {
       throw new OperatorException("unable to process signature: " + e.getMessage(), e);
     }

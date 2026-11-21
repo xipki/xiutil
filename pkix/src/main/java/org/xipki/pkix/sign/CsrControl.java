@@ -3,14 +3,18 @@
 
 package org.xipki.pkix.sign;
 
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.c509.C509BytesSubjectPublicKey;
+import org.xipki.codec.c509.C509SubjectPublicKey;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.json.JsonMap;
 import org.xipki.codec.util.StringUtil;
 import org.xipki.crypto.core.KemUtil;
 import org.xipki.crypto.core.KemEncapKey;
 import org.xipki.crypto.core.XiSecurityException;
+import org.xipki.pkix.cert.C509Cert;
 import org.xipki.pkix.cert.X509Cert;
+import org.xipki.pkix.util.C509Util;
 import org.xipki.pkix.util.KeyUtil;
 import org.xipki.crypto.core.SecretKeyWithAlias;
 import org.xipki.pkix.util.X509Util;
@@ -44,20 +48,31 @@ public class CsrControl {
 
   private final Map<String, SecretKeyWithAlias> kemMasterKeys;
 
-  private final List<X509Cert> peerCerts;
+  private final List<X509Cert> peerX509Certs;
+
+  private final List<C509Cert> peerC509Certs;
 
   public CsrControl() {
     this.defaultKemMasterKey = null;
-    this.peerCerts = null;
+    this.peerX509Certs = null;
+    this.peerC509Certs = null;
     this.kemMasterKeys = Collections.emptyMap();
   }
 
   public CsrControl(CsrControlConf conf) throws InvalidConfException {
     if (conf.peerCerts() == null) {
-      this.peerCerts = null;
+      this.peerX509Certs = null;
+      this.peerC509Certs = null;
     } else {
       try {
-        peerCerts = X509Util.parseCerts(StringUtil.toUtf8Bytes(conf.peerCerts().readContent()));
+        String certPem = conf.peerCerts().readContent();
+        if (certPem.contains("BEGIN C509 CERTIFICATE")) {
+          this.peerX509Certs = null;
+          this.peerC509Certs = C509Util.parseCerts(StringUtil.toUtf8Bytes(certPem));
+        } else {
+          this.peerX509Certs = X509Util.parseCerts(StringUtil.toUtf8Bytes(certPem));
+          this.peerC509Certs = null;
+        }
       } catch (Exception e) {
         throw new InvalidConfException(e);
       }
@@ -114,8 +129,12 @@ public class CsrControl {
     }
   }
 
-  public List<X509Cert> peerCerts() {
-    return peerCerts;
+  public List<X509Cert> peerX509Certs() {
+    return peerX509Certs;
+  }
+
+  public List<C509Cert> peerC509Certs() {
+    return peerC509Certs;
   }
 
   public KemEncapKey generateKemEncapKey(SubjectPublicKeyInfo publicKey)
@@ -125,6 +144,16 @@ public class CsrControl {
     }
 
     return KemUtil.generateKemEncapKey(publicKey, defaultKemMasterKey);
+  }
+
+
+  public KemEncapKey generateKemEncapKey(C509SubjectPublicKey publicKey)
+      throws XiSecurityException {
+    if (defaultKemMasterKey == null) {
+      return null;
+    }
+
+    return KemUtil.generateKemEncapKey((C509BytesSubjectPublicKey) publicKey, defaultKemMasterKey);
   }
 
   /**

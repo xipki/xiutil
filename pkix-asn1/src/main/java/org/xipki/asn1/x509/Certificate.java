@@ -5,11 +5,12 @@ package org.xipki.asn1.x509;
 
 import org.xipki.asn1.x500.X500Name;
 import org.xipki.codec.asn1.*;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
+import org.xipki.codec.crypto.AtomicContentSigner;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.crypto.ContentVerifier;
-import org.xipki.codec.crypto.ContentVerifierProvider;
+import org.xipki.codec.crypto.ContentVerifierFactory;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.exception.GenerationException;
@@ -90,8 +91,8 @@ public class Certificate extends Asn1Encodable {
       return this;
     }
 
-    public Certificate build(ContentSigner signer) throws GenerationException {
-      AlgorithmIdentifier sigAlgID = signer.getAlgorithmIdentifier();
+    public Certificate build(AtomicContentSigner signer) throws GenerationException {
+      AlgorithmIdentifier sigAlgID = signer.x509Algorithm();
       tbsGen.setSignature(sigAlgID);
 
       try {
@@ -99,7 +100,7 @@ public class Certificate extends Asn1Encodable {
           tbsGen.setExtensions(extGenerator.build());
         }
         TBSCertificate tbsCert = tbsGen.generateTBSCertificate();
-        byte[] signature = signer.atomicSign(tbsCert.getEncoded());
+        byte[] signature = signer.atomicX509Sign(tbsCert.getEncoded());
         return new Certificate(tbsCert, sigAlgID, new Asn1BitString(signature));
       } catch (SignatureException | CodecException e) {
         throw new GenerationException("cannot produce certificate signature", e);
@@ -295,7 +296,7 @@ public class Certificate extends Asn1Encodable {
     return new Asn1Sequence(tbsCertificate, signatureAlgorithm, signature);
   }
 
-  public boolean isSignatureValid(ContentVerifierProvider verifierProvider)
+  public boolean isSignatureValid(ContentVerifierFactory verifierFactory)
       throws SignatureException {
     if (!tbsCertificate.getSignature().equals(signatureAlgorithm)) {
       return false;
@@ -303,11 +304,11 @@ public class Certificate extends Asn1Encodable {
 
     ContentVerifier verifier;
     try {
-      verifier = verifierProvider.get(signatureAlgorithm);
+      verifier = verifierFactory.get(signatureAlgorithm);
     } catch (GenerationException e) {
       throw new SignatureException(e.getMessage(), e);
     }
-    return verifier.atomicVerify(tbsCertificate.getEncoded(), signature.getOctets());
+    return verifier.atomicX509Verify(tbsCertificate.getEncoded(), signature.getOctets());
   }
 
   @Override

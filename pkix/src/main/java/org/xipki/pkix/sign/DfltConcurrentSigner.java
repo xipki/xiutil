@@ -5,10 +5,18 @@ package org.xipki.pkix.sign;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xipki.c509.cert.C509Certificate;
+import org.xipki.c509.cert.CoseC509;
+import org.xipki.c509.sign.C509ExtendedSigner;
+import org.xipki.codec.c509.SignatureValue;
+import org.xipki.codec.c509.id.ConstHashAlgorithm;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.util.Args;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.crypto.core.HashAlgo;
 import org.xipki.crypto.core.SignAlgo;
 import org.xipki.crypto.core.XiSecurityException;
+import org.xipki.pkix.cert.C509Cert;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.util.exception.NoIdleSignerException;
 import org.xipki.util.misc.CollectionUtil;
@@ -18,15 +26,18 @@ import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.SignatureException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Dflt Concurrent Signer definition.
+ * Default Concurrent Signer definition.
  *
  * @author Lijun Liao (xipki)
  */
@@ -52,7 +63,49 @@ public class DfltConcurrentSigner implements ConcurrentSigner {
 
   private PublicKey publicKey;
 
-  private X509Cert[] certificateChain;
+  private X509Cert[] x509CertChain;
+
+  private C509Cert[] c509CertChain;
+
+  private CoseC509 coseC509CertChain;
+
+  private final MyC509Signer c509Signer = new MyC509Signer();
+
+  private final Map<Integer, byte[]> ocspSignerIdMap = new HashMap<>();
+
+  private class MyC509Signer implements C509ExtendedSigner {
+
+    @Override
+    public byte[] certHash(int c509HashAlg) {
+      byte[] signerId = ocspSignerIdMap.get(c509HashAlg);
+      if (signerId == null) {
+        throw new IllegalArgumentException("could not get C509 SignerId for "
+            + ConstHashAlgorithm.describe(c509HashAlg));
+      }
+      return signerId;
+    }
+
+    @Override
+    public int c509Algorithm() {
+      return algorithm.c509AlgorithmIdentifier();
+    }
+
+    @Override
+    public SignatureValue c509Sign(byte[] tbs) throws SignatureException {
+      return atomicC509Sign(tbs);
+    }
+
+    @Override
+    public CoseC509 certificates() {
+      return coseC509CertChain;
+    }
+
+    @Override
+    public boolean isHealthy() {
+      return DfltConcurrentSigner.this.isHealthy();
+    }
+
+  }
 
   static {
     final String propKey = "org.xipki.security.signservice.timeout";
@@ -80,7 +133,7 @@ public class DfltConcurrentSigner implements ConcurrentSigner {
 
     this.mac = mac;
     this.algorithm = SignAlgo.ofAlgorithmIdentifier(
-        signers.get(0).contentSigner().getAlgorithmIdentifier());
+        signers.get(0).contentSigner().x509Algorithm());
     this.signers = new ArrayBlockingQueue<>(signers.size());
     this.signers.addAll(signers);
 
@@ -155,14 +208,16 @@ public class DfltConcurrentSigner implements ConcurrentSigner {
   }
 
   @Override
-  public void setX509CertChain(X509Cert[] certificateChain) {
-    if (CollectionUtil.isEmpty(certificateChain)) {
-      this.certificateChain = null;
+  public void setX509CertChain(X509Cert[] certchain) {
+    if (CollectionUtil.isEmpty(certchain)) {
+      this.x509CertChain = null;
       return;
     }
 
-    this.certificateChain = certificateChain;
-    setPublicKey(certificateChain[0].publicKey());
+    this.x509CertChain = certchain;
+    if (publicKey == null) {
+      setPublicKey(certchain[0].publicKey());
+    }
   }
 
   @Override
@@ -177,12 +232,50 @@ public class DfltConcurrentSigner implements ConcurrentSigner {
 
   @Override
   public X509Cert x509Cert() {
-    return CollectionUtil.isEmpty(certificateChain) ? null : certificateChain[0];
+    return CollectionUtil.isEmpty(x509CertChain) ? null : x509CertChain[0];
   }
 
   @Override
   public X509Cert[] x509CertChain() {
-    return certificateChain;
+    return x509CertChain;
+  }
+
+  @Override
+  public C509Cert c509Cert() {
+    return CollectionUtil.isEmpty(c509CertChain) ? null : c509CertChain[0];
+  }
+
+  @Override
+  public void setC509CertChain(C509Cert[] certchain) {
+    if (CollectionUtil.isEmpty(certchain)) {
+      this.c509CertChain = null;
+      this.coseC509CertChain = null;
+      this.ocspSignerIdMap.clear();
+      return;
+    }
+
+    this.c509CertChain = certchain;
+    if (publicKey == null) {
+      setPublicKey(certchain[0].publicKey());
+    }
+
+    List<C509Certificate> rawCerts = new ArrayList<>(certchain.length);
+    for (C509Cert cert : certchain) {
+      rawCerts.add(cert.getCert());
+    }
+    this.coseC509CertChain = new CoseC509(rawCerts);
+    byte[] encodedCert = rawCerts.get(0).getEncoded();
+    for (HashAlgo ha : HashAlgo.values()) {
+      Integer c509AlgId = ha.c509AlgId();
+      if (c509AlgId != null) {
+        ocspSignerIdMap.put(c509AlgId, ha.hash(encodedCert));
+      }
+    }
+  }
+
+  @Override
+  public C509Cert[] c509CertChain() {
+    return c509CertChain;
   }
 
   @Override
@@ -191,7 +284,7 @@ public class DfltConcurrentSigner implements ConcurrentSigner {
     try {
       signer = borrowSigner();
       ContentSigner x509Signer = signer.contentSigner();
-      byte[] signature = x509Signer.atomicSign(new byte[]{1, 2, 3, 4});
+      byte[] signature = x509Signer.atomicX509Sign(new byte[]{1, 2, 3, 4});
       return signature != null && signature.length > 0;
     } catch (Exception ex) {
       LogUtil.error(LOG, ex);
@@ -208,31 +301,52 @@ public class DfltConcurrentSigner implements ConcurrentSigner {
   }
 
   @Override
-  public byte[] x509Sign(byte[] data) throws NoIdleSignerException, SignatureException {
-    Signer signer = borrowSigner();
+  public AlgorithmIdentifier x509Algorithm() {
+    return algorithm.algorithmIdentifier();
+  }
+
+  @Override
+  public byte[] atomicX509Sign(byte[] data) throws SignatureException {
+    Signer signer;
     try {
-      ContentSigner x509Signer = signer.contentSigner();
-      return x509Signer.atomicSign(data);
+      signer = borrowSigner();
+    } catch (NoIdleSignerException e) {
+      throw new SignatureException(e);
+    }
+
+    try {
+      ContentSigner contentSigner = signer.contentSigner();
+      return contentSigner.atomicX509Sign(data);
     } finally {
       requiteSigner(signer);
     }
   } // method sign
 
   @Override
-  public byte[][] x509Sign(byte[][] data) throws NoIdleSignerException, SignatureException {
-    byte[][] signatures = new byte[data.length][];
-    Signer signer = borrowSigner();
+  public int c509Algorithm() {
+    return algorithm.c509AlgorithmIdentifier();
+  }
+
+  @Override
+  public SignatureValue atomicC509Sign(byte[] data) throws SignatureException {
+    Signer signer;
+    try {
+      signer = borrowSigner();
+    } catch (NoIdleSignerException e) {
+      throw new SignatureException(e);
+    }
 
     try {
-      ContentSigner x509Signer = signer.contentSigner();
-      for (int i = 0; i < data.length; i++) {
-        signatures[i] = x509Signer.atomicSign(data[i]);
-      }
+      ContentSigner contentSigner = signer.contentSigner();
+      return contentSigner.atomicC509Sign(data);
     } finally {
       requiteSigner(signer);
     }
+  }
 
-    return signatures;
-  } // method sign
+  @Override
+  public C509ExtendedSigner asC509Signer() {
+    return c509Signer;
+  }
 
 }

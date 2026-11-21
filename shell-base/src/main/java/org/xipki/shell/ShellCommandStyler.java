@@ -10,7 +10,6 @@ import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
 
 import java.io.File;
-import java.util.List;
 
 /**
  * Styling helpers for interactive shell input and traced command output.
@@ -18,18 +17,6 @@ import java.util.List;
  * @author Lijun Liao (xipki)
  */
 final class ShellCommandStyler {
-
-  private static final String ANSI_BOLD_CYAN = "\033[1;36m";
-
-  private static final String ANSI_BOLD_YELLOW = "\033[1;33m";
-
-  private static final String ANSI_GREEN = "\033[32m";
-
-  private static final String ANSI_MAGENTA = "\033[35m";
-
-  private static final String ANSI_BLUE = "\033[34m";
-
-  private static final String ANSI_RESET = "\033[0m";
 
   private static final AttributedStyle COMMAND_STYLE =
       AttributedStyle.DEFAULT.bold().foreground(AttributedStyle.CYAN);
@@ -46,24 +33,16 @@ final class ShellCommandStyler {
   private static final AttributedStyle QUOTED_STYLE =
       AttributedStyle.DEFAULT.foreground(AttributedStyle.BLUE);
 
+  private static final ShellHighlighter HIGHLIGHTER = new ShellHighlighter();
+
   private ShellCommandStyler() {
   }
 
-  static String formatAnsi(List<String> words) {
-    if (words == null || words.isEmpty()) {
+  static String formatAnsi(String line) {
+    if (line == null || line.isEmpty()) {
       return "";
     }
-
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < words.size(); i++) {
-      if (i > 0) {
-        sb.append(' ');
-      }
-      String word = words.get(i);
-      String color = ansiColor(word, i == 0);
-      sb.append(color == null ? word : color + word + ANSI_RESET);
-    }
-    return sb.toString();
+    return HIGHLIGHTER.highlight(null, line).toAnsi();
   }
 
   static Highlighter highlighter() {
@@ -73,22 +52,6 @@ final class ShellCommandStyler {
   private static boolean looksLikeArgumentToken(String token) {
     return token.contains("/") || token.contains(".") || token.contains(File.separator)
         || token.startsWith("~");
-  }
-
-  private static String ansiColor(String token, boolean firstToken) {
-    if (firstToken) {
-      return ANSI_BOLD_CYAN;
-    } else if (token.startsWith("-")) {
-      return ANSI_BOLD_YELLOW;
-    } else if (token.startsWith("${") || token.startsWith("$")) {
-      return ANSI_MAGENTA;
-    } else if (ShellVariableSupport.isSimpleQuotedLiteral(token)) {
-      return ANSI_BLUE;
-    } else if (looksLikeArgumentToken(token)) {
-      return ANSI_GREEN;
-    } else {
-      return null;
-    }
   }
 
   private static AttributedStyle tokenStyle(String token, boolean firstToken) {

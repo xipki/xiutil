@@ -11,7 +11,7 @@ import org.xipki.codec.asn1.Asn1Sequence;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.util.ToStringUtil;
-import org.xipki.codec.ipadress.Rfc3779IPAddress;
+import org.xipki.codec.util.Rfc3779IPAddress;
 
 import java.util.List;
 

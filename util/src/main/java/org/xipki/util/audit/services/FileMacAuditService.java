@@ -5,7 +5,7 @@ package org.xipki.util.audit.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xipki.codec.ConfPairs;
+import org.xipki.codec.util.ConfPairs;
 import org.xipki.codec.exception.InvalidConfException;
 import org.xipki.codec.util.StringUtil;
 import org.xipki.util.misc.DateUtil;

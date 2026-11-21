@@ -3,7 +3,7 @@
 
 package org.xipki.pkix.pkcs12;
 
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
+import org.xipki.codec.x509.AlgorithmIdentifier;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.crypto.DigestOutputStream;
 import org.xipki.codec.util.Args;
@@ -68,13 +68,13 @@ public class P12CompositeMLDSASigner implements Signer {
   private class MyContentSigner implements ContentSigner {
 
     @Override
-    public AlgorithmIdentifier getAlgorithmIdentifier() {
+    public AlgorithmIdentifier x509Algorithm() {
       return signAlgo.algorithmIdentifier();
     }
 
     @Override
-    public Integer getC509AlgorithmIdentifier() {
-      return signAlgo.c509AlgorithmIdentifier();
+    public int c509Algorithm() {
+      return ContentSigner.checkC509AlgId(signAlgo.c509AlgorithmIdentifier(), signAlgo);
     }
 
     @Override
@@ -84,12 +84,12 @@ public class P12CompositeMLDSASigner implements Signer {
     }
 
     @Override
-    public byte[] getSignature() throws SignatureException {
+    public byte[] getX509Signature() throws SignatureException {
       byte[] digestValue = os.digest();
       byte[] m_ = CompositeSigUtil.buildM_(algoSuite, context, digestValue);
 
-      byte[]  pqcSig =  pqcSigner.contentSigner().atomicSign(m_);
-      byte[] tradSig = tradSigner.contentSigner().atomicSign(m_);
+      byte[]  pqcSig =  pqcSigner.contentSigner().atomicX509Sign(m_);
+      byte[] tradSig = tradSigner.contentSigner().atomicX509Sign(m_);
       return XiArrays.concatenate(pqcSig, tradSig);
     }
   }

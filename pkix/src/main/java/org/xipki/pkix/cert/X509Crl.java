@@ -8,7 +8,7 @@ import org.xipki.asn1.x509.CertificateList;
 import org.xipki.asn1.x509.Extension;
 import org.xipki.asn1.x509.Extensions;
 import org.xipki.codec.asn1.Asn1Oid;
-import org.xipki.codec.asn1.oid.ExtensionOIDs;
+import org.xipki.codec.x509.id.ExtensionOIDs;
 import org.xipki.codec.util.Args;
 
 import java.math.BigInteger;
@@ -90,7 +90,9 @@ public class X509Crl {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == this) return true;
+    if (this == obj) {
+      return true;
+    }
 
     if (!(obj instanceof X509Crl)) return false;
 

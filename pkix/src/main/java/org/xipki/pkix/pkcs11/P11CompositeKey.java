@@ -5,13 +5,12 @@ package org.xipki.pkix.pkcs11;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
 import org.xipki.codec.util.XiArrays;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
-import org.xipki.pkcs11.wrapper.TokenException;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.composite.CompositeKemSuite;
 import org.xipki.crypto.core.composite.CompositeSigSuite;
@@ -209,7 +208,7 @@ public class P11CompositeKey {
     }
   }
 
-  public void destroy() throws TokenException {
+  public void destroy() {
     pqcKey.destroy();
     tradKey.destroy();
   }

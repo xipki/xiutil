@@ -5,6 +5,7 @@ package org.xipki.pkix.sign;
 
 import org.xipki.codec.exception.GenerationException;
 import org.xipki.pkix.SecurityFactory;
+import org.xipki.pkix.cert.C509Cert;
 import org.xipki.pkix.cert.X509Cert;
 
 import java.util.Set;
@@ -48,5 +49,8 @@ public interface SignerFactory {
    */
   ConcurrentSigner newSigner(SecurityFactory securityFactory, String type, SignerConf conf,
                             X509Cert[] certificateChain) throws GenerationException;
+
+  ConcurrentSigner newSigner(SecurityFactory securityFactory, String type, SignerConf conf,
+                            C509Cert[] certificateChain) throws GenerationException;
 
 }

@@ -3,48 +3,63 @@
 
 package org.xipki.pkix.util;
 
-import org.xipki.codec.asn1.Asn1Oid;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.crypto.ContentVerifierProvider;
-import org.xipki.codec.util.BigIntegers;
-import org.xipki.codec.asn1.crypto.PrivateKeyInfo;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
-import org.xipki.codec.asn1.oid.AlgorithmOIDs;
-import org.xipki.codec.asn1.oid.KeyPurposeOIDs;
-import org.xipki.codec.util.XiArrays;
 import org.xipki.asn1.x500.X500Name;
 import org.xipki.asn1.x509.BasicConstraints;
 import org.xipki.asn1.x509.Certificate;
 import org.xipki.asn1.x509.ExtendedKeyUsage;
 import org.xipki.asn1.x509.Extension;
 import org.xipki.asn1.x509.KeyUsage;
-import org.xipki.crypto.core.EcCurveEnum;
-import org.xipki.crypto.core.KeyInfoUtil;
-import org.xipki.codec.util.Args;
-import org.xipki.codec.exception.CodecException;
+import org.xipki.c509.cert.C509Certificate;
+import org.xipki.c509.cert.C509CertificateBuilder;
+import org.xipki.c509.ext.C509BasicConstraints;
+import org.xipki.c509.ext.C509ExtKeyUsageSyntax;
+import org.xipki.c509.ext.C509KeyUsage;
+import org.xipki.c509.registry.ConstExtendedKeyUsage;
+import org.xipki.c509.registry.ConstExtensionId;
 import org.xipki.codec.Hex;
+import org.xipki.codec.asn1.Asn1Oid;
+import org.xipki.codec.c509.C509ECSubjectPublicKey;
+import org.xipki.codec.c509.C509RSASubjectPublicKey;
+import org.xipki.codec.c509.C509SubjectPublicKeyInfo;
+import org.xipki.codec.c509.id.ConstPublicKeyAlgorithm;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.PrivateKeyInfo;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.id.AlgorithmOIDs;
+import org.xipki.codec.x509.id.KeyPurposeOIDs;
+import org.xipki.c509.name.C509Name;
+import org.xipki.codec.c509.C509SubjectPublicKey;
+import org.xipki.codec.crypto.ContentVerifierFactory;
+import org.xipki.codec.exception.CodecException;
+import org.xipki.codec.util.Args;
+import org.xipki.codec.util.BigIntegers;
+import org.xipki.codec.util.XiArrays;
 import org.xipki.crypto.api.CryptoApi;
 import org.xipki.crypto.api.CryptoApiFactory;
-import org.xipki.pkcs11.wrapper.Functions;
+import org.xipki.crypto.core.EcCurveEnum;
 import org.xipki.crypto.core.HashAlgo;
+import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.SignAlgo;
-import org.xipki.crypto.core.composite.CompositeMLDSAPublicKey;
 import org.xipki.crypto.core.XiSecurityException;
-import org.xipki.pkix.pkcs12.KeyPairWithSubjectPublicKeyInfo;
+import org.xipki.crypto.core.composite.CompositeMLDSAPublicKey;
+import org.xipki.pkcs11.wrapper.Functions;
+import org.xipki.pkix.cert.DHSigStaticKeyCertPair;
+import org.xipki.pkix.pkcs12.C509KeyPairWithSubjectPublicKeyInfo;
+import org.xipki.pkix.pkcs12.C509Pkcs12KeyStoreWrapper;
 import org.xipki.pkix.pkcs12.KeyStoreWrapper;
 import org.xipki.pkix.pkcs12.KeystoreGenerationParameters;
 import org.xipki.pkix.pkcs12.P12ContentSignerBuilder;
 import org.xipki.pkix.pkcs12.Pkcs12KeyStore;
-import org.xipki.pkix.pkcs12.Pkcs12KeyStoreWrapper;
-import org.xipki.pkix.cert.DHSigStaticKeyCertPair;
+import org.xipki.pkix.pkcs12.X509KeyPairWithSubjectPublicKeyInfo;
+import org.xipki.pkix.pkcs12.X509Pkcs12KeyStoreWrapper;
 import org.xipki.pkix.sign.ConcurrentSigner;
 import org.xipki.pkix.sign.Signer;
 import org.xipki.pkix.sign.UnsignedSigner;
-import org.xipki.pkix.verify.CompositeMLDSAContentVerifierProvider;
-import org.xipki.pkix.verify.KEMContentVerifierProvider;
-import org.xipki.pkix.verify.SignatureContentVerifierProvider;
-import org.xipki.pkix.verify.XDHContentVerifierProvider;
+import org.xipki.pkix.sign.CompositeMLDSAContentVerifierFactory;
+import org.xipki.pkix.sign.KEMContentVerifierFactory;
+import org.xipki.pkix.sign.SignatureContentVerifierFactory;
+import org.xipki.pkix.sign.XDHContentVerifierFactory;
 import org.xipki.util.misc.RandomUtil;
 
 import javax.crypto.SecretKey;
@@ -76,7 +91,7 @@ public class KeyUtil {
 
   private static final CryptoApi cryptoApi = CryptoApiFactory.get();
 
-  public static final AlgorithmIdentifier ALGID_RSA =
+  public static final AlgorithmIdentifier X509_ALGID_RSA =
       AlgorithmIdentifier.ofNullParams(AlgorithmOIDs.id_rsaEncryption);
 
   private static final BigInteger SM2_ORDER = new BigInteger(
@@ -149,16 +164,24 @@ public class KeyUtil {
     return KeyInfoUtil.generateKeyPair(keySpec);
   }
 
-  public static KeyPairWithSubjectPublicKeyInfo generateKeyPair2(KeySpec keySpec)
+  public static X509KeyPairWithSubjectPublicKeyInfo generateX509KeyPair2(KeySpec keySpec)
       throws Exception {
     KeyPair keypair = generateKeyPair(keySpec);
-    SubjectPublicKeyInfo pkInfo = KeyUtil.createSubjectPublicKeyInfo(keypair.getPublic());
-    return new KeyPairWithSubjectPublicKeyInfo(keypair, pkInfo);
+    SubjectPublicKeyInfo pkInfo = createX509SubjectPublicKeyInfo(keypair.getPublic());
+    return new X509KeyPairWithSubjectPublicKeyInfo(keypair, pkInfo);
   }
 
-  public static Pkcs12KeyStoreWrapper generateKeyPair3(
+  public static C509KeyPairWithSubjectPublicKeyInfo generateC509KeyPair2(KeySpec keySpec)
+      throws Exception {
+    KeyPair keypair = generateKeyPair(keySpec);
+    SubjectPublicKeyInfo pkInfo = createX509SubjectPublicKeyInfo(keypair.getPublic());
+    return new C509KeyPairWithSubjectPublicKeyInfo(keypair,
+        C509SubjectPublicKey.fromSubjectPublicKeyInfo(pkInfo));
+  }
+
+  public static X509Pkcs12KeyStoreWrapper generateX509KeyPair3(
       KeySpec keySpec, KeystoreGenerationParameters params) throws Exception {
-    KeyPairWithSubjectPublicKeyInfo kp = generateKeyPair2(keySpec);
+    X509KeyPairWithSubjectPublicKeyInfo kp = generateX509KeyPair2(keySpec);
 
     // 10 minutes past
     Instant notBefore = Instant.now().minus(10, ChronoUnit.MINUTES);
@@ -200,11 +223,62 @@ public class KeyUtil {
       ksStream.flush();
     }
 
-    Pkcs12KeyStoreWrapper result = new Pkcs12KeyStoreWrapper(ksStream.toByteArray());
+    X509Pkcs12KeyStoreWrapper result = new X509Pkcs12KeyStoreWrapper(ksStream.toByteArray());
     result.setKeystoreObject(ks);
     result.setSubjectPublicKeyInfo(kp.subjectPublicKeyInfo());
     return result;
-  } // method generateKeyPair3
+  } // method generateX509KeyPair3
+
+
+  public static C509Pkcs12KeyStoreWrapper generateC509KeyPair3(
+      KeySpec keySpec, KeystoreGenerationParameters params) throws Exception {
+    C509KeyPairWithSubjectPublicKeyInfo kp = generateC509KeyPair2(keySpec);
+
+    // 10 minutes past
+    Instant notBefore = Instant.now().minus(10, ChronoUnit.MINUTES);
+    Instant notAfter = notBefore.plus(3650, ChronoUnit.DAYS);
+
+    String dnStr = "CN=DUMMY";
+    C509Name subjectDn = new C509Name(dnStr);
+    C509SubjectPublicKey subjectPublicKeyInfo = kp.subjectPublicKeyInfo();
+    Signer signer;
+    if (params.unsigned() != null && params.unsigned()) {
+      signer = UnsignedSigner.INSTANCE;
+    } else {
+      signer = getSigner(kp.keypair().getPrivate(), kp.keypair().getPublic(), true);
+    }
+
+    // Generate keystore
+    C509CertificateBuilder certGenerator =
+        C509CertificateBuilder.of(subjectDn, subjectPublicKeyInfo)
+            .serialNumber(BigInteger.ONE).validity(notBefore, notAfter)
+            .autoSubjectKeyId(true)
+            .extension(ConstExtensionId.basicConstraints, false, C509BasicConstraints.END_ENTITY)
+            .extension(ConstExtensionId.keyUsage, true, C509KeyUsage.DIGITAL_SIGNATURE)
+            .extension(ConstExtensionId.extKeyUsage, false,
+                new C509ExtKeyUsageSyntax(ConstExtendedKeyUsage.clientAuth,
+                    ConstExtendedKeyUsage.serverAuth));
+
+    C509Certificate cert = certGenerator.build(signer.contentSigner());
+
+    Pkcs12KeyStore ks = new Pkcs12KeyStore();
+    ks.load((byte[]) null, params.password());
+
+    // we need to wrap the C509 to a C509 certificate
+    ks.setC509KeyEntry("main", PrivateKeyInfo.fromPrivateKey(kp.keypair().getPrivate()), cert);
+
+    ByteArrayOutputStream ksStream = new ByteArrayOutputStream();
+    try {
+      ks.store(ksStream, params.password());
+    } finally {
+      ksStream.flush();
+    }
+
+    C509Pkcs12KeyStoreWrapper result = new C509Pkcs12KeyStoreWrapper(ksStream.toByteArray());
+    result.setKeystoreObject(ks);
+    result.setSubjectPublicKeyInfo(kp.subjectPublicKeyInfo());
+    return result;
+  } // method generateC509KeyPair3
 
   public static KeyStoreWrapper generateSecretKey(
       String algorithm, int keyBitLen, KeystoreGenerationParameters params) throws Exception {
@@ -216,7 +290,7 @@ public class KeyUtil {
 
     SecretKey secretKey = new SecretKeySpec(keyValue, algorithm);
 
-    KeyStore ks = KeyUtil.loadKeyStore("JCEKS", null, params.password());
+    KeyStore ks = loadKeyStore("JCEKS", null, params.password());
     ks.setKeyEntry("main", secretKey, params.password(), null);
     ByteArrayOutputStream ksStream = new ByteArrayOutputStream();
     try {
@@ -249,14 +323,57 @@ public class KeyUtil {
     sig.initSign(key, cryptoApi.getSecureRandom());
   }
 
-  public static SubjectPublicKeyInfo createSubjectPublicKeyInfo(PublicKey publicKey)
+  public static C509SubjectPublicKeyInfo createC509SubjectPublicKeyInfo(PublicKey publicKey)
+      throws InvalidKeyException {
+    Args.notNull(publicKey, "publicKey");
+    C509SubjectPublicKey c509PublicKey;
+    if (publicKey instanceof RSAPublicKey) {
+      RSAPublicKey rsaPubKey = (RSAPublicKey) publicKey;
+      c509PublicKey = new C509RSASubjectPublicKey(
+          rsaPubKey.getModulus(), rsaPubKey.getPublicExponent());
+    } else if (publicKey instanceof ECPublicKey) {
+      ECPublicKey ecPubKey = (ECPublicKey) publicKey;
+
+      ECParameterSpec paramSpec = ecPubKey.getParams();
+      Asn1Oid curveOid = detectCurveOid(paramSpec);
+
+      ECPoint pointW = ecPubKey.getW();
+      BigInteger wx = pointW.getAffineX();
+      if (wx.signum() != 1) {
+        throw new InvalidKeyException("Wx is not positive");
+      }
+
+      BigInteger wy = pointW.getAffineY();
+      if (wy.signum() != 1) {
+        throw new InvalidKeyException("Wy is not positive");
+      }
+
+      int keysize = (paramSpec.getCurve().getField().getFieldSize() + 7) / 8;
+      byte[] wxBytes = BigIntegers.asUnsignedByteArray(keysize, wx);
+      byte[] wyBytes = BigIntegers.asUnsignedByteArray(keysize, wy);
+      byte[] pubKey = XiArrays.concatenate(new byte[]{4}, wxBytes, wyBytes);
+      c509PublicKey = new C509ECSubjectPublicKey(
+          ConstPublicKeyAlgorithm.codeForCurveOid(curveOid), pubKey);
+    } else {
+      try {
+        c509PublicKey = C509SubjectPublicKey.fromSubjectPublicKeyInfo(
+            SubjectPublicKeyInfo.fromPublicKey(publicKey));
+      } catch (CodecException | InvalidKeySpecException e) {
+        throw new InvalidKeyException("could not parse encoded PublicKey", e);
+      }
+    }
+
+    return new C509SubjectPublicKeyInfo(c509PublicKey);
+  } // method createC509SubjectPublicKeyInfo
+
+  public static SubjectPublicKeyInfo createX509SubjectPublicKeyInfo(PublicKey publicKey)
       throws InvalidKeyException {
     Args.notNull(publicKey, "publicKey");
 
     if (publicKey instanceof RSAPublicKey) {
       RSAPublicKey rsaPubKey = (RSAPublicKey) publicKey;
-      return new SubjectPublicKeyInfo(ALGID_RSA,
-          new org.xipki.codec.asn1.crypto.RSAPublicKey(rsaPubKey.getModulus(),
+      return new SubjectPublicKeyInfo(X509_ALGID_RSA,
+          new org.xipki.codec.x509.RSAPublicKey(rsaPubKey.getModulus(),
               rsaPubKey.getPublicExponent()));
     } else if (publicKey instanceof ECPublicKey) {
       ECPublicKey ecPubKey = (ECPublicKey) publicKey;
@@ -288,7 +405,7 @@ public class KeyUtil {
         throw new InvalidKeyException("could not parse encoded PublicKey", e);
       }
     }
-  } // method createSubjectPublicKeyInfo
+  } // method createX509SubjectPublicKeyInfo
 
   public static ECPublicKey createECPublicKey(EcCurveEnum curve, byte[] encodedPoint)
       throws InvalidKeySpecException {
@@ -308,12 +425,12 @@ public class KeyUtil {
     }
   }
 
-  public static ContentVerifierProvider getContentVerifierProvider(PublicKey publicKey)
+  public static ContentVerifierFactory getContentVerifierFactory(PublicKey publicKey)
       throws InvalidKeyException {
-    return getContentVerifierProvider(publicKey, null, null);
+    return getContentVerifierFactory(publicKey, (DHSigStaticKeyCertPair.X509) null, null);
   }
 
-  public static ContentVerifierProvider getContentVerifierProvider(
+  public static ContentVerifierFactory getContentVerifierFactory(
       PublicKey publicKey, DHSigStaticKeyCertPair ownerKeyAndCert, SecretKey ownerMasterKey)
       throws InvalidKeyException {
     Args.notNull(publicKey, "publicKey");
@@ -335,19 +452,26 @@ public class KeyUtil {
         if (ownerKeyAndCert == null) {
           throw new InvalidKeyException("ownerKeyAndCert is required but absent");
         }
-        return new XDHContentVerifierProvider(publicKey, ownerKeyAndCert);
+
+        if (ownerKeyAndCert instanceof DHSigStaticKeyCertPair.X509) {
+          return new XDHContentVerifierFactory(publicKey,
+              (DHSigStaticKeyCertPair.X509) ownerKeyAndCert);
+        } else {
+          return new XDHContentVerifierFactory(publicKey,
+              (DHSigStaticKeyCertPair.C509) ownerKeyAndCert);
+        }
       } else if (keySpec.isMlkem() || keySpec.isCompositeMLKEM()) {
         if (ownerMasterKey == null) {
           throw new InvalidKeyException("ownerMasterKey is required but absent");
         }
-        return new KEMContentVerifierProvider(publicKey, ownerMasterKey);
+        return new KEMContentVerifierFactory(publicKey, ownerMasterKey);
       } else if (keySpec.isCompositeMLDSA() && publicKey instanceof CompositeMLDSAPublicKey) {
-        return new CompositeMLDSAContentVerifierProvider((CompositeMLDSAPublicKey) publicKey);
+        return new CompositeMLDSAContentVerifierFactory((CompositeMLDSAPublicKey) publicKey);
       }
     }
 
-    return new SignatureContentVerifierProvider(publicKey);
-  } // method getContentVerifierProvider
+    return new SignatureContentVerifierFactory(publicKey);
+  } // method getContentVerifierFactory
 
   public static Signer getSigner(PrivateKey key, PublicKey publicKey) throws Exception {
     return getSigner(key, publicKey, false);

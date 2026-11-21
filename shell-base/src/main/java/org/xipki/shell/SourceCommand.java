@@ -139,15 +139,9 @@ class SourceCommand implements Callable<Integer> {
     shell.out().flush();
   }
 
-  private String formatDisplayedCommand(String command) {
-    List<String> words;
-    try {
-      words = shell.parseWords(command);
-    } catch (Exception ex) {
-      return command;
-    }
-
-    return words.isEmpty() ? command : ShellCommandStyler.formatAnsi(words);
+  private static String formatDisplayedCommand(String command) {
+    // Style the original text instead of the parsed words, so that quotes are kept.
+    return ShellCommandStyler.formatAnsi(command);
   }
 
   private void executeIfBlock(List<String> blockLines, ShellScriptContext context) {

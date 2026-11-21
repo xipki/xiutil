@@ -8,8 +8,8 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.xipki.codec.asn1.crypto.PrivateKeyInfo;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.PrivateKeyInfo;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
 import org.xipki.codec.crypto.ContentVerifier;
 import org.xipki.codec.util.XiArrays;
 import org.xipki.crypto.core.KeyInfoUtil;
@@ -26,7 +26,6 @@ import org.xipki.crypto.core.composite.CompositeSigSuite;
 import org.xipki.crypto.core.composite.CompositeSigUtil;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.util.KeyUtil;
-import org.xipki.pkix.util.X509KeyUtil;
 import org.xipki.pkix.util.X509Util;
 import org.xipki.util.misc.RandomUtil;
 
@@ -215,9 +214,9 @@ public class CompositeSigTestVectorsTest {
       // the normal verification path, empty ctx
       SignAlgo signAlgo = SignAlgo.ofAlgorithmIdentifier(
           cert().subjectPublicKeyInfo().getAlgorithm());
-      ContentVerifier verifier = X509KeyUtil.getContentVerifierProvider(publicKey)
+      ContentVerifier verifier = KeyUtil.getContentVerifierFactory(publicKey)
           .get(signAlgo.algorithmIdentifier());
-      Assert.assertTrue(tcId + ": s with ContentVerifier", verifier.atomicVerify(M, s));
+      Assert.assertTrue(tcId + ": s with ContentVerifier", verifier.atomicX509Verify(M, s));
     }
   }
 
@@ -247,7 +246,7 @@ public class CompositeSigTestVectorsTest {
     PublicKey publicKey = cert().publicKey();
 
     // the Signer of xipki, empty ctx
-    byte[] sig = X509KeyUtil.getSigner(privateKey, publicKey).x509Sign(M);
+    byte[] sig = KeyUtil.getSigner(privateKey, publicKey).x509Sign(M);
     Assert.assertTrue(tcId + ": new signature", verify(publicKey, null, sig));
 
     if (MLDSA_CONTEXT_SUPPORTED) {

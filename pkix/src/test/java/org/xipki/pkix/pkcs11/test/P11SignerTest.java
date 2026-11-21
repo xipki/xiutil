@@ -9,9 +9,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.xipki.asn1.x500.X500Name;
 import org.xipki.asn1.x509.Certificate;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
 import org.xipki.codec.crypto.ContentSigner;
-import org.xipki.codec.crypto.ContentVerifierProvider;
+import org.xipki.codec.crypto.ContentVerifierFactory;
 import org.xipki.codec.json.JsonParser;
 import org.xipki.crypto.core.KemEncapKey;
 import org.xipki.crypto.core.KemUtil;
@@ -36,7 +36,6 @@ import org.xipki.pkix.sign.CsrControl;
 import org.xipki.pkix.sign.Signer;
 import org.xipki.pkix.sign.SignerConf;
 import org.xipki.pkix.util.KeyUtil;
-import org.xipki.pkix.util.X509KeyUtil;
 
 import java.math.BigInteger;
 import javax.crypto.Mac;
@@ -110,7 +109,7 @@ public class P11SignerTest {
       X509Cert cert = new X509Cert(new Certificate.V3CertBuilder(
           new X500Name("CN=issuer"), BigInteger.ONE, now, now.plus(1, ChronoUnit.DAYS),
           new X500Name("CN=SM2"), SubjectPublicKeyInfo.fromPublicKey(publicKey))
-          .build(X509KeyUtil.getSigner(issuerKp.getPrivate(), issuerKp.getPublic()).contentSigner()));
+          .build(KeyUtil.getSigner(issuerKp.getPrivate(), issuerKp.getPublic()).contentSigner()));
       signAndVerify(label, SignAlgo.SM2_SM3, new X509Cert[]{cert});
     } finally {
       slot.destroyObjectsByIdLabel(null, label);
@@ -158,7 +157,7 @@ public class P11SignerTest {
       P11SignerFactory factory = new P11SignerFactory();
       factory.setP11CryptServiceFactory(p11Factory);
       ConcurrentSigner concurrentSigner =
-          factory.newSigner(new SecurityFactoryImpl(), "PKCS11", conf, null);
+          factory.newSigner(new SecurityFactoryImpl(), "PKCS11", conf, (X509Cert[]) null);
       Assert.assertTrue(concurrentSigner.isMac());
       Assert.assertEquals(SignAlgo.HMAC_SHA256, concurrentSigner.algorithm());
 
@@ -167,7 +166,7 @@ public class P11SignerTest {
       byte[] expected = mac.doFinal(DATA);
 
       // atomic
-      Assert.assertArrayEquals(expected, concurrentSigner.x509Sign(DATA));
+      Assert.assertArrayEquals(expected, concurrentSigner.atomicX509Sign(DATA));
 
       // streaming, twice to check that the state is reset
       Signer signer = concurrentSigner.borrowSigner();
@@ -175,7 +174,7 @@ public class P11SignerTest {
         ContentSigner contentSigner = signer.contentSigner();
         for (int i = 0; i < 2; i++) {
           contentSigner.getOutputStream().write(DATA);
-          Assert.assertArrayEquals("streaming " + i, expected, contentSigner.getSignature());
+          Assert.assertArrayEquals("streaming " + i, expected, contentSigner.getX509Signature());
         }
       } finally {
         concurrentSigner.requiteSigner(signer);
@@ -240,32 +239,32 @@ public class P11SignerTest {
     P11SignerFactory factory = new P11SignerFactory();
     factory.setP11CryptServiceFactory(p11Factory);
     ConcurrentSigner concurrentSigner =
-        factory.newSigner(securityFactory, "PKCS11", conf, null);
+        factory.newSigner(securityFactory, "PKCS11", conf, (X509Cert[]) null);
 
     SignAlgo algo = SignAlgo.KEM_HMAC_SHA256;
     Assert.assertEquals(algo, concurrentSigner.algorithm());
 
-    ContentVerifierProvider cvp = X509KeyUtil.getContentVerifierProvider(
+    ContentVerifierFactory cvp = KeyUtil.getContentVerifierFactory(
         concurrentSigner.publicKey(), null, masterKey.secretKey());
 
     Assert.assertTrue("atomic", cvp.get(algo.algorithmIdentifier())
-        .atomicVerify(DATA, concurrentSigner.x509Sign(DATA)));
+        .atomicX509Verify(DATA, concurrentSigner.atomicX509Sign(DATA)));
 
     byte[] otherData = DATA.clone();
     otherData[0] ^= 1;
     Assert.assertFalse("other data", cvp.get(algo.algorithmIdentifier())
-        .atomicVerify(otherData, concurrentSigner.x509Sign(DATA)));
+        .atomicX509Verify(otherData, concurrentSigner.atomicX509Sign(DATA)));
 
     Signer signer = concurrentSigner.borrowSigner();
     try {
       Assert.assertArrayEquals(algo.algorithmIdentifier().getEncoded(),
           signer.getEncodedX509AlgId());
       ContentSigner contentSigner = signer.contentSigner();
-      Assert.assertEquals(algo.algorithmIdentifier(), contentSigner.getAlgorithmIdentifier());
+      Assert.assertEquals(algo.algorithmIdentifier(), contentSigner.x509Algorithm());
       for (int i = 0; i < 2; i++) {
         contentSigner.getOutputStream().write(DATA);
         Assert.assertTrue("streaming " + i, cvp.get(algo.algorithmIdentifier())
-            .atomicVerify(DATA, contentSigner.getSignature()));
+            .atomicX509Verify(DATA, contentSigner.getX509Signature()));
       }
     } finally {
       concurrentSigner.requiteSigner(signer);
@@ -323,18 +322,18 @@ public class P11SignerTest {
 
     Assert.assertEquals(algo, concurrentSigner.algorithm());
 
-    ContentVerifierProvider cvp =
-        X509KeyUtil.getContentVerifierProvider(concurrentSigner.publicKey(), null, null);
+    ContentVerifierFactory cvp =
+        KeyUtil.getContentVerifierFactory(concurrentSigner.publicKey(), null, null);
 
     // atomic
-    byte[] signature = concurrentSigner.x509Sign(DATA);
+    byte[] signature = concurrentSigner.atomicX509Sign(DATA);
     Assert.assertTrue(algo + ": atomic signature",
-        cvp.get(algo.algorithmIdentifier()).atomicVerify(DATA, signature));
+        cvp.get(algo.algorithmIdentifier()).atomicX509Verify(DATA, signature));
 
     byte[] otherData = DATA.clone();
     otherData[0] ^= 1;
     Assert.assertFalse(algo + ": signature over other data",
-        cvp.get(algo.algorithmIdentifier()).atomicVerify(otherData, signature));
+        cvp.get(algo.algorithmIdentifier()).atomicX509Verify(otherData, signature));
 
     // streaming, twice to check that the state is reset
     Signer signer = concurrentSigner.borrowSigner();
@@ -342,12 +341,12 @@ public class P11SignerTest {
       Assert.assertArrayEquals(algo.algorithmIdentifier().getEncoded(),
           signer.getEncodedX509AlgId());
       ContentSigner contentSigner = signer.contentSigner();
-      Assert.assertEquals(algo.algorithmIdentifier(), contentSigner.getAlgorithmIdentifier());
+      Assert.assertEquals(algo.algorithmIdentifier(), contentSigner.x509Algorithm());
       for (int i = 0; i < 2; i++) {
         contentSigner.getOutputStream().write(DATA);
-        signature = contentSigner.getSignature();
+        signature = contentSigner.getX509Signature();
         Assert.assertTrue(algo + ": streaming signature " + i,
-            cvp.get(algo.algorithmIdentifier()).atomicVerify(DATA, signature));
+            cvp.get(algo.algorithmIdentifier()).atomicX509Verify(DATA, signature));
       }
     } finally {
       concurrentSigner.requiteSigner(signer);

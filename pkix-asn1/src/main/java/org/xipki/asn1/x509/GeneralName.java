@@ -7,7 +7,7 @@ import org.xipki.asn1.x500.X500Name;
 import org.xipki.codec.asn1.*;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
-import org.xipki.codec.ipadress.IPAddressUtil;
+import org.xipki.codec.util.IPAddressUtil;
 
 import java.util.List;
 

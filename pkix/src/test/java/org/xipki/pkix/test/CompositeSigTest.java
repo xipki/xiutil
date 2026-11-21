@@ -8,14 +8,13 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.xipki.codec.Base64;
 import org.xipki.codec.crypto.ContentVerifier;
-import org.xipki.codec.crypto.ContentVerifierProvider;
+import org.xipki.codec.crypto.ContentVerifierFactory;
 import org.xipki.crypto.api.CryptoApiFactory;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.SignAlgo;
 import org.xipki.crypto.core.composite.CompositeSigSuite;
 import org.xipki.pkix.sign.Signer;
 import org.xipki.pkix.util.KeyUtil;
-import org.xipki.pkix.util.X509KeyUtil;
 import org.xipki.util.misc.RandomUtil;
 
 import java.security.KeyPair;
@@ -62,13 +61,13 @@ public class CompositeSigTest {
     SignAlgo signAlgo = SignAlgo.ofKey(kp.getPrivate());
     Assert.assertEquals(suite, signAlgo.compositeSigAlgoSuite());
 
-    Signer signer = X509KeyUtil.getSigner(kp.getPrivate(), kp.getPublic());
+    Signer signer = KeyUtil.getSigner(kp.getPrivate(), kp.getPublic());
     byte[] sigValue = signer.x509Sign(m);
 
-    ContentVerifierProvider verifierProvider =
-        X509KeyUtil.getContentVerifierProvider(kp.getPublic());
-    ContentVerifier verifier = verifierProvider.get(signAlgo.algorithmIdentifier());
-    boolean sigValid = verifier.atomicVerify(m, sigValue);
+    ContentVerifierFactory verifierFactory =
+        KeyUtil.getContentVerifierFactory(kp.getPublic());
+    ContentVerifier verifier = verifierFactory.get(signAlgo.algorithmIdentifier());
+    boolean sigValid = verifier.atomicX509Verify(m, sigValue);
     Assert.assertTrue("message is not valid", sigValid);
   }
 

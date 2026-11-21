@@ -4,6 +4,7 @@
 package org.xipki.pkix.cert;
 
 import org.xipki.asn1.x509.CRLReason;
+import org.xipki.c509.crl.C509RevocationReason;
 import org.xipki.codec.util.Args;
 
 import java.util.HashMap;
@@ -20,65 +21,26 @@ import java.util.Map;
  */
 public enum CrlReason {
 
-  /**
-   * This reason indicates that it is unspecified as to why the
-   * certificate has been revoked.
-   */
-  UNSPECIFIED(CRLReason.unspecified),
-
-  /**
-   * This reason indicates that it is known or suspected that the
-   * certificate subject's private key has been compromised. It applies
-   * to end-entity certificates only.
-   */
-  KEY_COMPROMISE(CRLReason.keyCompromise),
-
-  /**
-   * This reason indicates that it is known or suspected that the
-   * certificate subject's private key has been compromised. It applies
-   * to certificate authority (CA) certificates only.
-   */
-  CA_COMPROMISE(CRLReason.cACompromise),
-
-  /**
-   * This reason indicates that the subject's name or other information
-   * has changed.
-   */
-  AFFILIATION_CHANGED(CRLReason.affiliationChanged),
-
-  /**
-   * This reason indicates that the certificate has been superseded.
-   */
-  SUPERSEDED(CRLReason.superseded),
-
-  /**
-   * This reason indicates that the certificate is no longer needed.
-   */
-  CESSATION_OF_OPERATION(CRLReason.cessationOfOperation),
-
-  /**
-   * This reason indicates that the certificate has been put on hold.
-   */
-  CERTIFICATE_HOLD(CRLReason.certificateHold),
-
-  /**
-   * This reason indicates that the certificate was previously on hold
-   * and should be removed from the CRL. It is for use with delta CRLs.
-   */
-  REMOVE_FROM_CRL(CRLReason.removeFromCRL),
-
-  /**
-   * This reason indicates that the privileges granted to the subject of
-   * the certificate have been withdrawn.
-   */
-  PRIVILEGE_WITHDRAWN(CRLReason.privilegeWithdrawn),
-
-  /**
-   * This reason indicates that it is known or suspected that the
-   * certificate subject's private key has been compromised. It applies
-   * to authority attribute (AA) certificates only.
-   */
-  AA_COMPROMISE(CRLReason.aACompromise);
+  UNSPECIFIED(CRLReason.unspecified,
+      C509RevocationReason.UNSPECIFIED, "unspecified"),
+  KEY_COMPROMISE(CRLReason.keyCompromise,
+      C509RevocationReason.KEY_COMPROMISE, "keyCompromise"),
+  CA_COMPROMISE(CRLReason.cACompromise,
+      C509RevocationReason.CA_COMPROMISE, "cACompromise"),
+  AFFILIATION_CHANGED(CRLReason.affiliationChanged,
+      C509RevocationReason.AFFILIATION_CHANGED, "affiliationChanged"),
+  SUPERSEDED(CRLReason.superseded,
+      C509RevocationReason.SUPERSEDED, "superseded"),
+  CESSATION_OF_OPERATION(CRLReason.cessationOfOperation,
+      C509RevocationReason.CESSATION_OF_OPERATION, "cessationOfOperation"),
+  CERTIFICATE_HOLD(CRLReason.certificateHold,
+      C509RevocationReason.CERTIFICATE_HOLD, "certificateHold"),
+  REMOVE_FROM_CRL(CRLReason.removeFromCRL,
+      C509RevocationReason.REMOVE_FROM_CRL, "removeFromCRL"),
+  PRIVILEGE_WITHDRAWN(CRLReason.privilegeWithdrawn,
+      C509RevocationReason.PRIVILEGE_WITHDRAWN, "privilegeWithdrawn"),
+  AA_COMPROMISE(CRLReason.aACompromise,
+      C509RevocationReason.AA_COMPROMISE, "aACompromise");
 
   public static final List<CrlReason> PERMITTED_CLIENT_CRLREASONS = List.of(
       CrlReason.UNSPECIFIED,            CrlReason.KEY_COMPROMISE,
@@ -90,12 +52,32 @@ public enum CrlReason {
 
   private final CRLReason asn1;
 
-  CrlReason(CRLReason asn1) {
+  private final C509RevocationReason c509;
+
+  private final String text;
+
+  static {
+    for (CrlReason value : CrlReason.values()) {
+      REASONS.put(value.asn1.getValue(), value);
+    }
+  }
+
+  CrlReason(CRLReason asn1, C509RevocationReason c509, String text) {
     this.asn1 = asn1;
+    this.c509 = c509;
+    this.text = text;
   }
 
   public CRLReason asn1() {
     return asn1;
+  }
+
+  public C509RevocationReason c509() {
+    return c509;
+  }
+
+  public String text() {
+    return text;
   }
 
   public int code() {
@@ -106,10 +88,12 @@ public enum CrlReason {
     return asn1.getEnumeratedName();
   }
 
-  static {
-    for (CrlReason value : CrlReason.values()) {
-      REASONS.put(value.asn1.getValue(), value);
-    }
+  /**
+   * Whether the code may be used for a revoked certificate (all but removeFromCRL).
+   */
+  public static boolean isC509RevocationCode(int code) {
+    CrlReason r = REASONS.get(code);
+    return r != null && r != REMOVE_FROM_CRL;
   }
 
   public static CrlReason forReasonCode(int reasonCode) {

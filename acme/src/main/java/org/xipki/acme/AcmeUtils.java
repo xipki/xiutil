@@ -4,11 +4,15 @@
 package org.xipki.acme;
 
 import org.xipki.codec.asn1.Asn1Oid;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.DssSigValue;
-import org.xipki.codec.asn1.crypto.RSAPublicKey;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
-import org.xipki.codec.asn1.oid.AlgorithmOIDs;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.DssSigValue;
+import org.xipki.codec.x509.RSAPublicKey;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.id.AlgorithmOIDs;
+import org.xipki.codec.c509.C509BytesSubjectPublicKey;
+import org.xipki.codec.c509.C509RSASubjectPublicKey;
+import org.xipki.codec.c509.C509SubjectPublicKey;
+import org.xipki.codec.c509.id.ConstPublicKeyAlgorithm;
 import org.xipki.codec.util.Pack;
 import org.xipki.acme.type.AcmeError;
 import org.xipki.codec.Base64;
@@ -128,6 +132,51 @@ public final class AcmeUtils {
       byte[] encodedPoint = buildECPublicKeyData(curve,
         Base64.decodeFast(jwk.get("x")), Base64.decodeFast(jwk.get("y")));
       return Arrays.equals(pkInfo.subjectPublicKey(), encodedPoint);
+    } else {
+      throw new RuntimeException("unsupported kty " + kty);
+    }
+  }
+
+  public static boolean matchKey(Map<String, String> jwk, C509SubjectPublicKey pkInfo)
+    throws InvalidKeySpecException {
+    int pkKeyAlgo = pkInfo.algorithm();
+
+    String kty = jwk.get("kty");
+    if ("RSA".equalsIgnoreCase(kty)) {
+      if (!(pkKeyAlgo == ConstPublicKeyAlgorithm.rsaEncryption)) {
+        return false;
+      }
+
+      BigInteger n = new BigInteger(1, Base64.decodeFast(jwk.get("n")));
+      BigInteger e = new BigInteger(1, Base64.decodeFast(jwk.get("e")));
+
+      C509RSASubjectPublicKey rsaPublicKey;
+      try {
+        rsaPublicKey = (C509RSASubjectPublicKey) pkInfo;
+      } catch (ClassCastException ex) {
+        throw new InvalidKeySpecException(ex);
+      }
+
+      return n.equals(rsaPublicKey.modulus()) && e.equals(rsaPublicKey.publicExponent());
+    } else if ("EC".equalsIgnoreCase(kty)) {
+      if (ConstPublicKeyAlgorithm.isWeierstrass(pkKeyAlgo)) {
+        return false;
+      }
+
+      String curveName = jwk.get("crv");
+      EcCurveEnum curve = EcCurveEnum.ofAlias(curveName);
+      try {
+        int curveAlgId = ConstPublicKeyAlgorithm.codeForCurveOid(curve.oid());
+        if (curveAlgId != pkKeyAlgo) {
+          return false;
+        }
+      } catch (IllegalArgumentException e) {
+        return false;
+      }
+
+      byte[] encodedPoint = buildECPublicKeyData(curve,
+        Base64.decodeFast(jwk.get("x")), Base64.decodeFast(jwk.get("y")));
+      return Arrays.equals(((C509BytesSubjectPublicKey) pkInfo).publicKeyData(), encodedPoint);
     } else {
       throw new RuntimeException("unsupported kty " + kty);
     }

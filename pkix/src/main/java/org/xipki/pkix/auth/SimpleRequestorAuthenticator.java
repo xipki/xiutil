@@ -4,6 +4,8 @@
 package org.xipki.pkix.auth;
 
 import org.xipki.asn1.x509.Certificate;
+import org.xipki.c509.cert.C509Certificate;
+import org.xipki.codec.util.IoUtil;
 import org.xipki.codec.util.StringUtil;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
@@ -11,10 +13,13 @@ import org.xipki.codec.json.JsonList;
 import org.xipki.codec.json.JsonMap;
 import org.xipki.codec.json.JsonParser;
 import org.xipki.crypto.core.XiSecurityException;
+import org.xipki.pkix.cert.C509Cert;
 import org.xipki.pkix.cert.X509Cert;
+import org.xipki.pkix.util.C509Util;
 import org.xipki.pkix.util.X509Util;
 import org.xipki.util.conf.FileOrBinary;
 import org.xipki.util.io.XipkiIoUtil;
+import org.xipki.util.misc.CollectionUtil;
 import org.xipki.util.password.PasswordResolverException;
 import org.xipki.util.password.Passwords;
 
@@ -60,8 +65,12 @@ import java.util.Set;
  *   // optional
  *   "certs": [
  *     {
- *       // required
- *       "cert": "",
+ *       // required, either X509 or C509 certificate
+ *       "cert": {
+ *         // file or binary
+ *         "file": "path to certificate file"
+ *         // "binary": "base64-encoded certificate binary"
+ *       },
  *       // required, valid values: ALL, CMP, EST, REST, SCEP
  *       "protocols":[],
  *       // required: valid values: ALL, ENROLL_CERT, REENROLL_CERT, GEN_KEYPAIR,
@@ -189,20 +198,51 @@ public class SimpleRequestorAuthenticator implements RequestorAuthenticator {
 
   }
 
-  private static class Cert {
+  private static class X509CertEntry {
 
     private final Set<Requestor.Protocol> protocols;
     private final AuthInfo authInfo;
 
     private final X509Cert cert;
 
-    public Cert(Set<Requestor.Protocol> protocols, AuthInfo authInfo, X509Cert cert) {
+    public X509CertEntry(Set<Requestor.Protocol> protocols, AuthInfo authInfo, X509Cert cert) {
       this.protocols = protocols;
       this.authInfo = Args.notNull(authInfo, "authInfo");
       this.cert = Args.notNull(cert, "cert");
     }
 
     boolean applyTo(Requestor.Protocol protocol, X509Cert cert) {
+      if (protocols != null && !protocols.contains(protocol)) {
+        return false;
+      }
+
+      return this.cert.equals(cert);
+    }
+
+    public boolean isCertprofilePermitted(String caName, String certprofile) {
+      return authInfo.isCertprofilePermitted(caName, certprofile);
+    }
+
+    public boolean isPermitted(Requestor.Permission permission) {
+      return authInfo.isPermitted(permission);
+    }
+
+  }
+
+  private static class C509CertEntry {
+
+    private final Set<Requestor.Protocol> protocols;
+    private final AuthInfo authInfo;
+
+    private final C509Cert cert;
+
+    public C509CertEntry(Set<Requestor.Protocol> protocols, AuthInfo authInfo, C509Cert cert) {
+      this.protocols = protocols;
+      this.authInfo = Args.notNull(authInfo, "authInfo");
+      this.cert = Args.notNull(cert, "cert");
+    }
+
+    boolean applyTo(Requestor.Protocol protocol, C509Cert cert) {
       if (protocols != null && !protocols.contains(protocol)) {
         return false;
       }
@@ -283,12 +323,12 @@ public class SimpleRequestorAuthenticator implements RequestorAuthenticator {
     }
   }
 
-  private static class MyCertRequestor implements Requestor.CertRequestor {
+  private static class MyX509CertRequestor implements Requestor.X509CertRequestor {
 
     private final String name;
-    private final Cert cert;
+    private final X509CertEntry cert;
 
-    public MyCertRequestor(Cert cert) {
+    public MyX509CertRequestor(X509CertEntry cert) {
       this.cert = Args.notNull(cert, "cert");
       this.name = "cert-" + cert.cert.commonName();
     }
@@ -320,9 +360,48 @@ public class SimpleRequestorAuthenticator implements RequestorAuthenticator {
 
   }
 
+  private static class MyC509CertRequestor implements Requestor.C509CertRequestor {
+
+    private final String name;
+    private final C509CertEntry cert;
+
+    public MyC509CertRequestor(C509CertEntry cert) {
+      this.cert = Args.notNull(cert, "cert");
+      this.name = "cert-" + cert.cert.commonName();
+    }
+
+    @Override
+    public String name() {
+      return name;
+    }
+
+    @Override
+    public boolean isCertprofilePermitted(String caName, String certprofile) {
+      return cert.isCertprofilePermitted(caName, certprofile);
+    }
+
+    @Override
+    public boolean isPermitted(Permission permission) {
+      return cert.isPermitted(permission);
+    }
+
+    @Override
+    public byte[] keyId() {
+      return cert.cert.subjectKeyId();
+    }
+
+    @Override
+    public C509Cert cert() {
+      return cert.cert;
+    }
+
+  }
+
   private Set<MyPasswordRequestor> passwordRequestors;
 
-  private Set<MyCertRequestor> certRequestors;
+  private Set<MyX509CertRequestor> x509CertRequestors;
+
+  private Set<MyC509CertRequestor> c509CertRequestors;
 
   public SimpleRequestorAuthenticator() {
   }
@@ -349,26 +428,43 @@ public class SimpleRequestorAuthenticator implements RequestorAuthenticator {
         }
       }
 
-      Set<MyCertRequestor> certRequestors0 = null;
+      Set<MyX509CertRequestor> x509CertRequestors0 = null;
+      Set<MyC509CertRequestor> c509CertRequestors0 = null;
+
       list = root.getList("certs");
       if (list != null) {
         List<JsonMap> jCerts =  list.toMapList();
-        certRequestors0 = new HashSet<>(jCerts.size());
+        x509CertRequestors0 = new HashSet<>(jCerts.size());
+        c509CertRequestors0 = new HashSet<>(jCerts.size());
 
         for (JsonMap m : jCerts) {
           FileOrBinary jCert = FileOrBinary.parse(m.getNnMap("cert"));
-          X509Cert cert = (jCert.file() == null)
-              ? new X509Cert((Certificate) null, jCert.binary())
-              : X509Util.parseCert(XipkiIoUtil.expandFilepath(new File(jCert.file()), true));
+          byte[] certBytes;
+          if (jCert.file() == null) {
+            certBytes = jCert.binary();
+          } else {
+            certBytes = IoUtil.read(XipkiIoUtil.expandFilepath(new File(jCert.file()), true));
+          }
 
-          Cert crt = new Cert(parseProtocols(m), parseAuthInfo(m), cert);
-          certRequestors0.add(new MyCertRequestor(crt));
+          certBytes = X509Util.toDerEncoded(certBytes);
+          if (certBytes[0] == 0x30) {
+            X509Cert cert = new X509Cert(null, certBytes);
+            X509CertEntry crt = new X509CertEntry(parseProtocols(m), parseAuthInfo(m), cert);
+            x509CertRequestors0.add(new MyX509CertRequestor(crt));
+          } else {
+            C509Cert cert = new C509Cert(null, certBytes);
+            C509CertEntry crt = new C509CertEntry(parseProtocols(m), parseAuthInfo(m), cert);
+            c509CertRequestors0.add(new MyC509CertRequestor(crt));
+          }
         }
       }
 
       this.passwordRequestors = passwordRequestors0;
-      this.certRequestors = certRequestors0;
-    } catch (CodecException | PasswordResolverException | IOException | CertificateException e) {
+      this.x509CertRequestors = CollectionUtil.isEmpty(x509CertRequestors0)
+          ? null : x509CertRequestors0;
+      this.c509CertRequestors = CollectionUtil.isEmpty(c509CertRequestors0)
+          ? null : c509CertRequestors0;
+    } catch (CodecException | PasswordResolverException | IOException e) {
       throw new XiSecurityException(e.getMessage(), e);
     }
   }
@@ -439,9 +535,22 @@ public class SimpleRequestorAuthenticator implements RequestorAuthenticator {
   }
 
   @Override
-  public Requestor.CertRequestor getCertRequestor(Requestor.Protocol protocol, X509Cert cert) {
-    if (certRequestors != null) {
-      for (MyCertRequestor m : certRequestors) {
+  public Requestor.X509CertRequestor getCertRequestor(Requestor.Protocol protocol, X509Cert cert) {
+    if (x509CertRequestors != null) {
+      for (MyX509CertRequestor m : x509CertRequestors) {
+        if (m.cert.applyTo(protocol, cert)) {
+          return m;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  @Override
+  public Requestor.C509CertRequestor getCertRequestor(Requestor.Protocol protocol, C509Cert cert) {
+    if (c509CertRequestors != null) {
+      for (MyC509CertRequestor m : c509CertRequestors) {
         if (m.cert.applyTo(protocol, cert)) {
           return m;
         }

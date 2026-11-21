@@ -5,7 +5,7 @@ package org.xipki.asn1.cms;
 
 import org.xipki.asn1.x509.Attribute;
 import org.xipki.codec.asn1.*;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
+import org.xipki.codec.x509.AlgorithmIdentifier;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 

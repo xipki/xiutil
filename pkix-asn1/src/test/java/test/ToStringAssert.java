@@ -35,11 +35,11 @@ class ToStringAssert {
 
     Assert.assertFalse(name + ": empty toString()", text.trim().isEmpty());
 
-    // only the classes of asn1 and of org.xipki.codec.asn1.crypto (codec)
+    // only the classes of asn1 and of org.xipki.codec.x509 (codec)
     // are checked, no ASN.1 primitives.
     boolean inScope = Certificate.class.getProtectionDomain().getCodeSource()
         .equals(obj.getClass().getProtectionDomain().getCodeSource())
-        || obj.getClass().getName().startsWith("org.xipki.codec.asn1.crypto.");
+        || obj.getClass().getName().startsWith("org.xipki.codec.x509.");
     if (obj instanceof Asn1Primitive || !inScope) {
       return text;
     }

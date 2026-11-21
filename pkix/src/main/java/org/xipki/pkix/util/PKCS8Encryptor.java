@@ -4,13 +4,13 @@
 package org.xipki.pkix.util;
 
 import org.xipki.codec.asn1.Asn1OctetString;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.EncryptedPrivateKeyInfo;
-import org.xipki.codec.asn1.crypto.PBES2Parameters;
-import org.xipki.codec.asn1.crypto.PBKDF2Params;
-import org.xipki.codec.asn1.crypto.PrivateKeyInfo;
-import org.xipki.codec.asn1.oid.NistOIDs;
-import org.xipki.codec.asn1.oid.PkcsOIDs;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.EncryptedPrivateKeyInfo;
+import org.xipki.codec.x509.PBES2Parameters;
+import org.xipki.codec.x509.PBKDF2Params;
+import org.xipki.codec.x509.PrivateKeyInfo;
+import org.xipki.codec.x509.id.NistOIDs;
+import org.xipki.codec.x509.id.PkcsOIDs;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.util.XiArrays;
 import org.xipki.crypto.api.CryptoApi;

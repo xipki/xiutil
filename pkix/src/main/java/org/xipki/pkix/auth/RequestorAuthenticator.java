@@ -4,6 +4,7 @@
 package org.xipki.pkix.auth;
 
 import org.xipki.crypto.core.XiSecurityException;
+import org.xipki.pkix.cert.C509Cert;
 import org.xipki.pkix.cert.X509Cert;
 
 /**
@@ -37,6 +38,14 @@ public interface RequestorAuthenticator {
    * @param cert the client certificate
    * @return the requestor.
    */
-  Requestor.CertRequestor getCertRequestor(Requestor.Protocol protocol, X509Cert cert);
+  Requestor.X509CertRequestor getCertRequestor(Requestor.Protocol protocol, X509Cert cert);
+
+  /**
+   * Return the certificate-based requestor for given client certificate.
+   * Used for EST and REST gateway.
+   * @param cert the client certificate
+   * @return the requestor.
+   */
+  Requestor.C509CertRequestor getCertRequestor(Requestor.Protocol protocol, C509Cert cert);
 
 }

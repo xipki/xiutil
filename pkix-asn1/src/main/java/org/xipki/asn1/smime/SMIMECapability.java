@@ -9,8 +9,8 @@ import org.xipki.codec.asn1.Asn1Encodable;
 import org.xipki.codec.asn1.Asn1Oid;
 import org.xipki.codec.asn1.Asn1Primitive;
 import org.xipki.codec.asn1.Asn1Sequence;
-import org.xipki.codec.asn1.oid.NistOIDs;
-import org.xipki.codec.asn1.oid.PkcsOIDs;
+import org.xipki.codec.x509.id.NistOIDs;
+import org.xipki.codec.x509.id.PkcsOIDs;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 

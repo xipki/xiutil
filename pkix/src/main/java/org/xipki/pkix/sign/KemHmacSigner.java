@@ -3,9 +3,9 @@
 
 package org.xipki.pkix.sign;
 
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.oid.XipkiOIDs;
-import org.xipki.codec.c509.ConstSignatureAlgorithm;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.id.XipkiOIDs;
+import org.xipki.codec.c509.id.ConstSignatureAlgorithm;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.util.Args;
 import org.xipki.crypto.core.SignAlgo;
@@ -41,7 +41,7 @@ public class KemHmacSigner implements Signer {
   public ContentSigner contentSigner() {
     return new ContentSigner() {
       @Override
-      public AlgorithmIdentifier getAlgorithmIdentifier() {
+      public AlgorithmIdentifier x509Algorithm() {
         return ALG_ID;
       }
 
@@ -51,19 +51,19 @@ public class KemHmacSigner implements Signer {
       }
 
       @Override
-      public byte[] getSignature() throws SignatureException {
-        byte[] rawSignature = macSigner.contentSigner().getSignature();
+      public byte[] getX509Signature() throws SignatureException {
+        byte[] rawSignature = macSigner.contentSigner().getX509Signature();
         return new KemHmacSignature(id, rawSignature).getEncoded();
       }
 
       @Override
-      public byte[] atomicSign(byte[] toBeSignData) throws SignatureException {
-        byte[] rawSignature = macSigner.contentSigner().atomicSign(toBeSignData);
+      public byte[] atomicX509Sign(byte[] toBeSignData) throws SignatureException {
+        byte[] rawSignature = macSigner.contentSigner().atomicX509Sign(toBeSignData);
         return new KemHmacSignature(id, rawSignature).getEncoded();
       }
 
       @Override
-      public Integer getC509AlgorithmIdentifier() {
+      public int c509Algorithm() {
         return C509_ALG_ID;
       }
 

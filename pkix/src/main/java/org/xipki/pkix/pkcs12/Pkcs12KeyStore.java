@@ -16,24 +16,31 @@ import org.xipki.asn1.x500.X500Name;
 import org.xipki.asn1.x509.Attribute;
 import org.xipki.asn1.x509.Certificate;
 import org.xipki.asn1.x509.Extension;
+import org.xipki.c509.cert.C509Certificate;
+import org.xipki.c509.ext.C509ExtKeyUsageSyntax;
+import org.xipki.c509.ext.C509Extension;
+import org.xipki.c509.registry.ConstExtendedKeyUsage;
+import org.xipki.c509.registry.ConstExtensionId;
 import org.xipki.codec.asn1.Asn1Encoding;
 import org.xipki.codec.asn1.Asn1OctetString;
 import org.xipki.codec.asn1.Asn1Oid;
 import org.xipki.codec.asn1.Asn1Primitive;
+import org.xipki.codec.x509.id.XipkiOIDs;
+import org.xipki.c509.name.C509Name;
 import org.xipki.codec.util.XiArrays;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.PBES2Parameters;
-import org.xipki.codec.asn1.crypto.PBKDF2Params;
-import org.xipki.codec.asn1.crypto.PrivateKeyInfo;
-import org.xipki.codec.asn1.oid.ExtensionOIDs;
-import org.xipki.codec.asn1.oid.KeyPurposeOIDs;
-import org.xipki.codec.asn1.oid.MiscOIDs;
-import org.xipki.codec.asn1.oid.NistOIDs;
-import org.xipki.codec.asn1.oid.NttOIDs;
-import org.xipki.codec.asn1.oid.OiwOIDs;
-import org.xipki.codec.asn1.oid.PkcsOIDs;
-import org.xipki.codec.asn1.crypto.EncryptedPrivateKeyInfo;
-import org.xipki.codec.asn1.crypto.DigestInfo;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.PBES2Parameters;
+import org.xipki.codec.x509.PBKDF2Params;
+import org.xipki.codec.x509.PrivateKeyInfo;
+import org.xipki.codec.x509.id.ExtensionOIDs;
+import org.xipki.codec.x509.id.KeyPurposeOIDs;
+import org.xipki.codec.x509.id.MiscOIDs;
+import org.xipki.codec.x509.id.NistOIDs;
+import org.xipki.codec.x509.id.NttOIDs;
+import org.xipki.codec.x509.id.OiwOIDs;
+import org.xipki.codec.x509.id.PkcsOIDs;
+import org.xipki.codec.x509.EncryptedPrivateKeyInfo;
+import org.xipki.codec.x509.DigestInfo;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.util.IoUtil;
 import org.xipki.codec.exception.CodecException;
@@ -51,15 +58,7 @@ import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * PKCS#12 keystore (RFC 7292) with key entries (private key and certificate chain) and
@@ -96,7 +95,106 @@ public class Pkcs12KeyStore {
 
     @Override
     public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+
       return o instanceof Bytes && Arrays.equals(value, ((Bytes) o).value);
+    }
+
+  }
+
+  private static final class CertName {
+
+    private final X500Name x509Name;
+
+    private final C509Name c509Name;
+
+    CertName(X500Name x509Name) {
+      this.x509Name = x509Name;
+      this.c509Name = null;
+    }
+
+    CertName(C509Name c509Name) {
+      this.x509Name = null;
+      this.c509Name = c509Name; // c509Name may be null for self-issued cert
+    }
+
+    @Override
+    public int hashCode() {
+      return x509Name != null ? x509Name.hashCode()
+          : (c509Name != null) ? c509Name.hashCode() : 1;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+
+      if (!(obj instanceof CertName)) {
+        return false;
+      }
+
+      CertName b = (CertName) obj;
+      return Objects.equals(x509Name, b.x509Name)
+          && Objects.equals(c509Name, b.c509Name);
+    }
+  }
+
+  private static final class Cert {
+
+    private final Asn1Oid type;
+
+    private final Certificate x509cert;
+
+    private final C509Certificate c509cert;
+
+    private final CertName issuer;
+
+    private final CertName subject;
+
+    public Cert(Certificate x509cert) {
+      this.x509cert = Args.notNull(x509cert, "x509cert");
+      this.c509cert = null;
+      this.type = PkcsOIDs.x509Certificate;
+
+      this.issuer = new CertName(x509cert.getIssuer());
+      this.subject = new CertName(x509cert.getSubject());
+    }
+
+    public Cert(C509Certificate c509cert) {
+      this.x509cert = null;
+      this.c509cert = Args.notNull(c509cert, "c509cert");
+      this.type = XipkiOIDs.id_xipki_certtype_c509cert;
+
+      this.issuer = new CertName(c509cert.body().issuer());
+      this.subject = new CertName(c509cert.body().subject());
+    }
+
+    byte[] subjectKeyId() {
+      if (x509cert != null) {
+        return sha1(x509cert.getSubjectPublicKeyInfo().subjectPublicKey());
+      } else {
+        return sha256_20(c509cert.subjectPublicKey().getEncoded());
+      }
+    }
+
+    byte[] authorityKeyId() {
+      if (x509cert != null) {
+        Extension extn = x509cert.getExtension(ExtensionOIDs.authorityKeyIdentifier);
+        return extn == null ? null : extn.getAuthorityKeyIdentifier().keyIdentifier();
+      } else {
+        return c509cert.extensions().authorityKeyId();
+      }
+    }
+
+    public byte[] getEncoded() {
+      if (x509cert != null) {
+        return x509cert.getEncoded();
+      } else {
+        return c509cert.getEncoded();
+      }
     }
 
   }
@@ -106,7 +204,7 @@ public class Pkcs12KeyStore {
    */
   private static final class CertInfo {
 
-    private final Certificate cert;
+    private final Cert cert;
 
     private final byte[] encoded;
 
@@ -119,14 +217,14 @@ public class Pkcs12KeyStore {
 
     private boolean akiResolved;
 
-    private CertInfo(Certificate cert, byte[] encoded) {
+    private CertInfo(Cert cert, byte[] encoded) {
       this.cert = cert;
       this.encoded = encoded;
-      this.ski = new Bytes(sha1(cert.getSubjectPublicKeyInfo().subjectPublicKey()));
+      this.ski = new Bytes(this.cert.subjectKeyId());
     }
 
-    private static CertInfo of(Certificate cert) {
-      return new CertInfo(cert, cert.getEncoded(Asn1Encoding.DER));
+    private static CertInfo of(Cert cert) {
+      return new CertInfo(cert, cert.getEncoded());
     }
 
     /**
@@ -134,8 +232,7 @@ public class Pkcs12KeyStore {
      */
     private Bytes aki() {
       if (!akiResolved) {
-        Extension extn = cert.getExtension(ExtensionOIDs.authorityKeyIdentifier);
-        byte[] keyId = (extn == null) ? null : extn.getAuthorityKeyIdentifier().keyIdentifier();
+        byte[] keyId = cert.authorityKeyId();
         aki = (keyId == null) ? null : new Bytes(keyId);
         akiResolved = true;
       }
@@ -255,7 +352,7 @@ public class Pkcs12KeyStore {
   /**
    * Certificates of the pool by subject, built when needed.
    */
-  private Map<X500Name, CertInfo> certsBySubject;
+  private Map<CertName, CertInfo> certsBySubject;
 
   public Pkcs12KeyStore() {
   }
@@ -289,17 +386,27 @@ public class Pkcs12KeyStore {
   }
 
   /**
-   * Returns the certificate of the key entry, or the trusted certificate.
+   * Returns the X.509 certificate of the key entry, or the trusted certificate.
    * @param alias the alias.
    * @return the certificate, or null if absent.
    */
   public Certificate getCertificate(String alias) {
     Entry entry = entries.get(Args.notNull(alias, "alias"));
-    return (entry == null || entry.cert == null) ? null : entry.cert.cert;
+    return (entry == null || entry.cert == null) ? null : entry.cert.cert.x509cert;
   }
 
   /**
-   * Returns the certificate chain of a key entry, starting with its certificate.
+   * Returns the C509 certificate of the key entry, or the trusted certificate.
+   * @param alias the alias.
+   * @return the certificate, or null if absent.
+   */
+  public C509Certificate getC509Certificate(String alias) {
+    Entry entry = entries.get(Args.notNull(alias, "alias"));
+    return (entry == null || entry.cert == null) ? null : entry.cert.cert.c509cert;
+  }
+
+  /**
+   * Returns the X.509 certificate chain of a key entry, starting with its certificate.
    * @param alias the alias.
    * @return the chain, an empty list for a key without certificate, null if alias is not a key
    *         entry.
@@ -312,9 +419,32 @@ public class Pkcs12KeyStore {
 
     List<Certificate> chain = new ArrayList<>(3);
     for (CertInfo c : chain(entry)) {
-      chain.add(c.cert);
+      if (c.cert.x509cert != null) {
+        chain.add(c.cert.x509cert);
+      }
     }
-    return chain;
+    return chain.isEmpty() ? null : chain;
+  }
+
+  /**
+   * Returns the C.509 certificate chain of a key entry, starting with its certificate.
+   * @param alias the alias.
+   * @return the chain, an empty list for a key without certificate, null if alias is not a key
+   *         entry.
+   */
+  public List<C509Certificate> getC509CertificateChain(String alias) {
+    Entry entry = entries.get(Args.notNull(alias, "alias"));
+    if (entry == null || entry.key == null) {
+      return null;
+    }
+
+    List<C509Certificate> chain = new ArrayList<>(3);
+    for (CertInfo c : chain(entry)) {
+      if (c.cert.c509cert != null) {
+        chain.add(c.cert.c509cert);
+      }
+    }
+    return chain.isEmpty() ? null : chain;
   }
 
   public void setCertificateEntry(String alias, Certificate cert) throws KeyStoreException {
@@ -322,7 +452,17 @@ public class Pkcs12KeyStore {
       throw new KeyStoreException("There is a key entry with the name " + alias + ".");
     }
 
-    CertInfo certInfo = CertInfo.of(cert);
+    CertInfo certInfo = CertInfo.of(new Cert(cert));
+    entries.put(alias, new Entry(null, certInfo, null));
+    addToPool(certInfo);
+  }
+
+  public void setC509CertificateEntry(String alias, C509Certificate cert) throws KeyStoreException {
+    if (isKeyEntry(alias)) {
+      throw new KeyStoreException("There is a key entry with the name " + alias + ".");
+    }
+
+    CertInfo certInfo = CertInfo.of(new Cert(cert));
     entries.put(alias, new Entry(null, certInfo, null));
     addToPool(certInfo);
   }
@@ -332,11 +472,29 @@ public class Pkcs12KeyStore {
     setKeyEntry(alias, key, List.of(Args.notNull(cert, "cert")));
   }
 
+  public void setC509KeyEntry(String alias, PrivateKeyInfo key, C509Certificate cert)
+      throws KeyStoreException {
+    setC509KeyEntry(alias, key, List.of(Args.notNull(cert, "cert")));
+  }
+
   public void setKeyEntry(String alias, PrivateKeyInfo key, List<Certificate> chain)
+      throws KeyStoreException {
+    doSetKeyEntry(alias, key, chain, null);
+  }
+
+  public void setC509KeyEntry(String alias, PrivateKeyInfo key, List<C509Certificate> chain)
+      throws KeyStoreException {
+    doSetKeyEntry(alias, key, null, chain);
+  }
+
+  private void doSetKeyEntry(String alias, PrivateKeyInfo key,
+                             List<Certificate> x509Chain, List<C509Certificate> c509Chain)
       throws KeyStoreException {
     if (key == null) {
       throw new KeyStoreException("PKCS12 does not support null key");
     }
+
+    List<?> chain = x509Chain != null ? x509Chain : c509Chain;
 
     if (chain == null || chain.isEmpty()) {
       throw new KeyStoreException("chain may not be empty");
@@ -344,11 +502,14 @@ public class Pkcs12KeyStore {
 
     // List.contains(null) throws NullPointerException for immutable lists
     List<CertInfo> certInfos = new ArrayList<>(chain.size());
-    for (Certificate c : chain) {
+    for (Object c : chain) {
       if (c == null) {
         throw new KeyStoreException("chain may not contain null elements");
+      } else if (c instanceof Certificate) {
+        certInfos.add(CertInfo.of(new Cert((Certificate) c)));
+      } else { // if (c instanceof C509Certificate) {
+        certInfos.add(CertInfo.of(new Cert((C509Certificate) c)));
       }
-      certInfos.add(CertInfo.of(c));
     }
 
     Entry old = entries.get(alias);
@@ -383,8 +544,8 @@ public class Pkcs12KeyStore {
 
       CertInfo issuer = (cert.aki() == null) ? null : certPool.get(cert.aki());
       if (issuer == null) {
-        X500Name issuerName = cert.cert.getIssuer();
-        if (!issuerName.equals(cert.cert.getSubject())) {
+        CertName issuerName = cert.cert.issuer;
+        if (!issuerName.equals(cert.cert.subject)) {
           issuer = certsBySubject().get(issuerName);
         }
       }
@@ -393,11 +554,11 @@ public class Pkcs12KeyStore {
     return chain;
   }
 
-  private Map<X500Name, CertInfo> certsBySubject() {
+  private Map<CertName, CertInfo> certsBySubject() {
     if (certsBySubject == null) {
       certsBySubject = new HashMap<>();
       for (CertInfo c : certPool.values()) {
-        certsBySubject.putIfAbsent(c.cert.getSubject(), c);
+        certsBySubject.putIfAbsent(c.cert.subject, c);
       }
     }
     return certsBySubject;
@@ -524,13 +685,19 @@ public class Pkcs12KeyStore {
             bag.getBagAttributes()));
       } else if (bagId.equals(PkcsOIDs.certBag)) {
         CertBag cb = CertBag.fromAsn1(bag.getBagValue().asSequence());
-        if (!cb.getCertId().equals(PkcsOIDs.x509Certificate)) {
+        Asn1Oid certId = cb.getCertId();
+        if (!(certId.equals(PkcsOIDs.x509Certificate)
+              || certId.equals(XipkiOIDs.id_xipki_certtype_c509cert))) {
           throw new IOException("Unsupported certificate type: " + cb.getCertId());
         }
 
         byte[] encoded = cb.getCertValue().asOctetString().getOctets();
-        CertInfo cert = new CertInfo(Certificate.fromEncoded(encoded), encoded);
-        certBags.add(new Bag<>(cert, bag.getBagAttributes()));
+        Cert cert = certId.equals(PkcsOIDs.x509Certificate)
+            ? new Cert(Certificate.fromEncoded(encoded))
+            : new Cert(C509Certificate.parse(encoded));
+
+        CertInfo certInfo = new CertInfo(cert, encoded);
+        certBags.add(new Bag<>(certInfo, bag.getBagAttributes()));
       }
     }
   }
@@ -639,9 +806,32 @@ public class Pkcs12KeyStore {
       writtenCerts.add(new Bytes(entry.cert.encoded));
 
       // Oracle trusted key usage: the extended key usages of the certificate
-      Extension extn = entry.cert.cert.getExtension(ExtensionOIDs.extendedKeyUsage);
-      List<Asn1Oid> ekus = (extn != null) ? extn.getExtendedKeyUsage().getEntries()
-          : List.of(KeyPurposeOIDs.anyExtendedKeyUsage);
+      List<Asn1Oid> ekus = new ArrayList<>(2);
+      if (entry.cert.cert.x509cert != null) {
+        Extension extn = entry.cert.cert.x509cert.getExtension(ExtensionOIDs.extendedKeyUsage);
+        if (extn != null) {
+          ekus.addAll(extn.getExtendedKeyUsage().getEntries());
+        }
+      } else {
+        assert entry.cert.cert.c509cert != null;
+        C509Extension extn = entry.cert.cert.c509cert.extensions()
+            .get(ConstExtensionId.extKeyUsage);
+        if (extn != null) {
+          C509ExtKeyUsageSyntax syntax = (C509ExtKeyUsageSyntax) extn.value();
+          assert syntax != null;
+          for (long usage : syntax.usages()) {
+            Asn1Oid oid = ConstExtendedKeyUsage.getOid(usage);
+            if (oid != null) {
+              ekus.add(oid);
+            }
+          }
+        }
+      }
+
+      if (ekus.isEmpty()) {
+        ekus.add(KeyPurposeOIDs.anyExtendedKeyUsage);
+      }
+
       certBags.add(certBag(entry.cert, new Attribute.Set0(List.of(
           Attribute.ofFriendlyName(e.getKey()), Attribute.ofOraclePkcs12TrustedKeyUsage(ekus)))));
     }
@@ -688,7 +878,7 @@ public class Pkcs12KeyStore {
   }
 
   private static SafeBag certBag(CertInfo cert, Attribute.Set0 attrs) {
-    CertBag certBag = new CertBag(PkcsOIDs.x509Certificate, new Asn1OctetString(cert.encoded));
+    CertBag certBag = new CertBag(cert.cert.type, new Asn1OctetString(cert.encoded));
     return new SafeBag(PkcsOIDs.certBag, certBag.toAsn1Primitive(), attrs);
   }
 
@@ -779,6 +969,14 @@ public class Pkcs12KeyStore {
       return crypto.newMessageDigest("SHA-1").digest(data);
     } catch (GeneralSecurityException e) {
       throw new IllegalStateException("SHA-1 is not available", e);
+    }
+  }
+
+  private static byte[] sha256_20(byte[] data) {
+    try {
+      return Arrays.copyOf(crypto.newMessageDigest("SHA-256").digest(data), 20);
+    } catch (GeneralSecurityException e) {
+      throw new IllegalStateException("SHA-256 is not available", e);
     }
   }
 

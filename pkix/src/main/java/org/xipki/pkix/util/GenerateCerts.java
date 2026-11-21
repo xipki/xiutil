@@ -12,16 +12,28 @@ import org.xipki.asn1.x509.GeneralName;
 import org.xipki.asn1.x509.GeneralNames;
 import org.xipki.asn1.x509.KeyUsage;
 import org.xipki.asn1.x509.SubjectKeyIdentifier;
+import org.xipki.c509.cert.C509Certificate;
+import org.xipki.c509.cert.C509CertificateBuilder;
+import org.xipki.c509.ext.C509AltName;
+import org.xipki.c509.ext.C509BasicConstraints;
+import org.xipki.c509.ext.C509ExtKeyUsageSyntax;
+import org.xipki.c509.ext.C509KeyUsage;
+import org.xipki.c509.name.C509GeneralName;
+import org.xipki.c509.name.C509GeneralNames;
+import org.xipki.c509.registry.ConstExtendedKeyUsage;
+import org.xipki.c509.registry.ConstExtensionId;
 import org.xipki.codec.asn1.Asn1Oid;
-import org.xipki.codec.asn1.crypto.PrivateKeyInfo;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
-import org.xipki.codec.asn1.oid.KeyPurposeOIDs;
+import org.xipki.c509.name.C509Name;
+import org.xipki.codec.c509.C509SubjectPublicKey;
+import org.xipki.codec.x509.PrivateKeyInfo;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.id.KeyPurposeOIDs;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.util.StringUtil;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
-import org.xipki.codec.ipadress.IPAddressUtil;
+import org.xipki.codec.util.IPAddressUtil;
 import org.xipki.codec.json.JsonList;
 import org.xipki.codec.json.JsonMap;
 import org.xipki.codec.json.JsonParser;
@@ -29,8 +41,10 @@ import org.xipki.crypto.core.HashAlgo;
 import org.xipki.crypto.core.KeySpec;
 import org.xipki.crypto.core.pem.PemObject;
 import org.xipki.crypto.core.pem.PemReader;
+import org.xipki.pkix.cert.C509Cert;
+import org.xipki.pkix.pkcs12.C509KeyPairWithSubjectPublicKeyInfo;
 import org.xipki.util.misc.PemEncoder;
-import org.xipki.pkix.pkcs12.KeyPairWithSubjectPublicKeyInfo;
+import org.xipki.pkix.pkcs12.X509KeyPairWithSubjectPublicKeyInfo;
 import org.xipki.pkix.pkcs12.KeystoreGenerationParameters;
 import org.xipki.pkix.pkcs12.Pkcs12KeyStore;
 import org.xipki.pkix.cert.X509Cert;
@@ -44,8 +58,11 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -53,6 +70,9 @@ import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -65,6 +85,45 @@ import static org.xipki.codec.util.Args.notEmpty;
  * @author Lijun Liao (xipki)
  */
 public class GenerateCerts {
+
+  private enum CertFormat {
+    C509,
+    X509;
+  }
+
+  private static class CertChoice {
+
+    private final X509Cert x509;
+
+    private final C509Cert c509;
+
+    public CertChoice(X509Cert x509) {
+      this.x509 = Args.notNull(x509, "x509");
+      this.c509 = null;
+    }
+
+    public CertChoice(C509Cert c509) {
+      this.x509 = null;
+      this.c509 = Args.notNull(c509, "c509");
+    }
+
+    public byte[] getEncoded() {
+      return (x509 != null) ? x509.getEncoded() : c509.getEncoded();
+    }
+
+    public PublicKey publicKey() {
+      return (x509 != null) ? x509.publicKey() : c509.publicKey();
+    }
+
+    public Instant notBefore() {
+      return (x509 != null) ? x509.notBefore() : c509.notBefore();
+    }
+
+    public Instant notAfter() {
+      return (x509 != null) ? x509.notAfter() : c509.notAfter();
+    }
+
+  }
 
   private static class Conf {
 
@@ -204,16 +263,19 @@ public class GenerateCerts {
     private final String name;
     private final String issuerName;
     private final String keyType;
+    // C509, X509 (default)
+    private final CertFormat certFormat;
     // CA, TLS-SERVER, TLS-CLIENT, TLS, EE
     private final String certType;
     private final String subject;
     private final String validity;
     private final String p12Password;
 
-    public KeyCertConf(String name, String issuerName, String keyType,
+    public KeyCertConf(String name, String issuerName, String keyType, CertFormat certFormat,
                       String certType, String subject, String validity, String p12Password) {
       this.name = Args.notBlank(name, "name");
       this.keyType = Args.notBlank(keyType, "keyType");
+      this.certFormat = certFormat == null ? CertFormat.X509 : certFormat;
       this.certType = Args.notBlank(certType, "certType");
       this.subject = Args.notBlank(subject, "subject");
       this.validity = Args.notBlank(validity, "validity");
@@ -227,8 +289,9 @@ public class GenerateCerts {
 
     public static KeyCertConf parse(JsonMap json) throws CodecException {
       return new KeyCertConf(json.getString("name"), json.getString("issuerName"),
-          json.getString("keyType"), json.getString("certType"),
-          json.getString("subject"), json.getString("validity"), json.getString("p12Password"));
+          json.getString("keyType"), json.getEnum("certFormat", CertFormat.class),
+          json.getString("certType"), json.getString("subject"),
+          json.getString("validity"), json.getString("p12Password"));
     }
 
     public static List<KeyCertConf> parseList(JsonList json) throws CodecException {
@@ -284,13 +347,17 @@ public class GenerateCerts {
   private static class SingleKeyCert {
 
     private final String keyType;
+    // C509, X509 (default)
+    private final CertFormat certFormat;
     // TLS-SERVER, TLS-CLIENT, TLS, EE
     private final String certType;
     private final String subject;
     private final String validity;
 
-    public SingleKeyCert(String keyType, String certType, String subject, String validity) {
+    public SingleKeyCert(String keyType, CertFormat certFormat, String certType,
+                         String subject, String validity) {
       this.keyType = Args.notBlank(keyType, "keyType");
+      this.certFormat = certFormat == null ? CertFormat.X509 : certFormat;
       this.certType = certType;
       this.subject = Args.notBlank(subject, "subject");
       this.validity = Args.notBlank(validity, "validity");
@@ -300,7 +367,8 @@ public class GenerateCerts {
     }
 
     public static SingleKeyCert parse(JsonMap json) throws CodecException {
-      return new SingleKeyCert(json.getString("keyType"), json.getString("certType"),
+      return new SingleKeyCert(json.getString("keyType"),
+          json.getEnum("certFormat", CertFormat.class), json.getString("certType"),
           json.getString("subject"), json.getString("validity"));
     }
 
@@ -317,9 +385,9 @@ public class GenerateCerts {
   private static class KeyStoreAndCert {
     private final byte[] keystoreBytes;
 
-    private final X509Cert cert;
+    private final CertChoice cert;
 
-    public KeyStoreAndCert(byte[] keystoreBytes, X509Cert cert) {
+    public KeyStoreAndCert(byte[] keystoreBytes, CertChoice cert) {
       this.keystoreBytes = keystoreBytes;
       this.cert = cert;
     }
@@ -439,6 +507,66 @@ public class GenerateCerts {
     System.out.println("  java " + GenerateCerts.class.getName() + " <conf file> <target dir>");
   }
 
+  private static CertChoice parseCert(File file)
+      throws IOException, CertificateEncodingException {
+    return parseCert(IoUtil.read(file));
+  }
+
+  private static CertChoice parseCert(byte[] bytes) throws CertificateEncodingException {
+    bytes = X509Util.toDerEncoded(bytes);
+    if (bytes[0] == 0x30) {
+      return new CertChoice(X509Util.parseCert(bytes));
+    } else {
+      return new CertChoice(C509Util.parseCert(bytes));
+    }
+  }
+
+  private static X509Cert[] toX509Certs(CertChoice[] certs) {
+    for (CertChoice c : certs) {
+      if (c.x509 == null) {
+        throw new IllegalArgumentException("certs contains non-X509 certificate");
+      }
+    }
+
+    X509Cert[] r = new X509Cert[certs.length];
+    int index = 0;
+    for (CertChoice c : certs) {
+      r[index++] = c.x509;
+    }
+    return r;
+  }
+
+  private static C509Cert[] toC509Certs(CertChoice[] certs) {
+    for (CertChoice c : certs) {
+      if (c.c509 == null) {
+        throw new IllegalArgumentException("certs contains non-C509 certificate");
+      }
+    }
+
+    C509Cert[] r = new C509Cert[certs.length];
+    int index = 0;
+    for (CertChoice c : certs) {
+      r[index++] = c.c509;
+    }
+    return r;
+  }
+
+  private static List<CertChoice> parseCerts(File certsFile)
+      throws IOException, CertificateException {
+    List<CertChoice> certs = new LinkedList<>();
+    try (FileInputStream certsStream = new FileInputStream(certsFile);
+        PemReader pemReader = new PemReader(
+            new InputStreamReader(certsStream, StandardCharsets.UTF_8))) {
+      PemObject pemObj;
+      while ((pemObj = pemReader.readPemObject()) != null) {
+        if (pemObj.getType().contains("CERTIFICATE")) {
+          certs.add(parseCert(pemObj.getContent()));
+        }
+      }
+    }
+    return certs;
+  }
+
   private static void generateKeyCerts(String confFile, String targetDirPath) throws Exception {
     File targetDir = new File(targetDirPath);
     if (targetDir.exists()) {
@@ -451,7 +579,7 @@ public class GenerateCerts {
     Conf conf = Conf.parse(root);
     conf.validate();
 
-    Map<String, X509Cert[]>  nameCertMap = new HashMap<>();
+    Map<String, CertChoice[]> nameCertMap = new HashMap<>();
     Map<String, KeyWithCert> caKeyAndCertPairMap = new HashMap<>();
     Set<String> namesOfGeneratedKeyCerts = new HashSet<>();
 
@@ -479,8 +607,8 @@ public class GenerateCerts {
 
       File baseDir = new File(targetDir, isCA ? "CA-" + name : name);
       if (baseDir.exists()) {
-        X509Cert cert = X509Util.parseCert(new File(baseDir, name + "-cert.pem"));
-        nameCertMap.put(name, new X509Cert[]{cert});
+        CertChoice cert = parseCert(new File(baseDir, name + "-cert.pem"));
+        nameCertMap.put(name, new CertChoice[]{cert});
 
         PrivateKeyInfo pkInfo = PrivateKeyInfo.fromEncoded(
             X509Util.toDerEncoded(IoUtil.read(new File(baseDir, name + "-key.pem"))));
@@ -497,37 +625,65 @@ public class GenerateCerts {
       System.out.println("Start generating key and certificates of " + name);
       KeySpec keySpec = KeySpec.ofKeySpec(keyCertConf.keyType);
 
-      KeyPairWithSubjectPublicKeyInfo keyPairInfo = X509KeyUtil.generateKeyPair2(keySpec);
-      SubjectPublicKeyInfo subjectPublicKeyInfo = keyPairInfo.subjectPublicKeyInfo();
-      KeyPair keyPair = keyPairInfo.keypair();
-
       char[] password = keyCertConf.p12Password.toCharArray();
       KeystoreGenerationParameters genParams = new KeystoreGenerationParameters(password);
-
-      Validity validity = Validity.getInstance(keyCertConf.validity);
-      X500Name subject = new X500Name(keyCertConf.subject);
       String certType = keyCertConf.certType;
-
+      Validity validity = Validity.getInstance(keyCertConf.validity);
       KeyStoreAndCert keyStoreAndCert;
+      KeyPair keyPair;
 
-      if (keyCertConf.issuerName == null) {
-        Signer signer = X509KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic());
+      if (keyCertConf.certFormat == CertFormat.C509) {
+        C509KeyPairWithSubjectPublicKeyInfo keyPairInfo = KeyUtil.generateC509KeyPair2(keySpec);
+        C509SubjectPublicKey subjectPublicKeyInfo = keyPairInfo.subjectPublicKeyInfo();
+        keyPair = keyPairInfo.keypair();
 
-        keyStoreAndCert = generateSelfSignedCertificate(certType, signer.contentSigner(),
-            keyPair.getPrivate(), subjectPublicKeyInfo, genParams, subject, validity);
-      } else {
-        KeyWithCert caKeyCertPair = caKeyAndCertPairMap.get(keyCertConf.issuerName);
-        if (caKeyCertPair == null) {
-          throw new InvalidConfException("unknown CA " + keyCertConf.issuerName);
+        C509Name subject = new C509Name(keyCertConf.subject);
+
+        if (keyCertConf.issuerName == null) {
+          Signer signer = KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic());
+
+          keyStoreAndCert = generateC509SelfSignedCertificate(certType,
+              signer.contentSigner(), keyPair.getPrivate(), subjectPublicKeyInfo,
+              genParams, subject, validity);
+        } else {
+          KeyWithCert caKeyCertPair = caKeyAndCertPairMap.get(keyCertConf.issuerName);
+          if (caKeyCertPair == null) {
+            throw new InvalidConfException("unknown CA " + keyCertConf.issuerName);
+          }
+
+          Signer signer = KeyUtil.getSigner(caKeyCertPair.key(), caKeyCertPair.cert().publicKey());
+          keyStoreAndCert = generateC509Certificate(certType,
+              signer.contentSigner(), caKeyCertPair.cert().c509, keyPair.getPrivate(),
+              subjectPublicKeyInfo, genParams, subject, validity);
         }
-        Signer signer =
-            X509KeyUtil.getSigner(caKeyCertPair.key(), caKeyCertPair.cert().publicKey());
-        keyStoreAndCert = generateCertificate(certType, signer.contentSigner(), caKeyCertPair.cert(),
-            keyPair.getPrivate(), subjectPublicKeyInfo, genParams, subject, validity);
+      } else {
+        X509KeyPairWithSubjectPublicKeyInfo keyPairInfo = KeyUtil.generateX509KeyPair2(keySpec);
+        SubjectPublicKeyInfo subjectPublicKeyInfo = keyPairInfo.subjectPublicKeyInfo();
+        keyPair = keyPairInfo.keypair();
+
+        X500Name subject = new X500Name(keyCertConf.subject);
+
+        if (keyCertConf.issuerName == null) {
+          Signer signer = KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic());
+
+          keyStoreAndCert = generateX509SelfSignedCertificate(certType,
+              signer.contentSigner(), keyPair.getPrivate(), subjectPublicKeyInfo,
+              genParams, subject, validity);
+        } else {
+          KeyWithCert caKeyCertPair = caKeyAndCertPairMap.get(keyCertConf.issuerName);
+          if (caKeyCertPair == null) {
+            throw new InvalidConfException("unknown CA " + keyCertConf.issuerName);
+          }
+
+          Signer signer = KeyUtil.getSigner(caKeyCertPair.key(), caKeyCertPair.cert().publicKey());
+          keyStoreAndCert = generateX509Certificate(certType,
+              signer.contentSigner(), caKeyCertPair.cert().x509, keyPair.getPrivate(),
+              subjectPublicKeyInfo, genParams, subject, validity);
+        }
       }
 
-      X509Cert cert = keyStoreAndCert.cert;
-      nameCertMap.put(name, new X509Cert[]{cert});
+      CertChoice cert = keyStoreAndCert.cert;
+      nameCertMap.put(name, new CertChoice[]{cert});
 
       if (isCA) {
         caKeyAndCertPairMap.put(name, new KeyWithCert(cert, keyPair.getPrivate()));
@@ -551,7 +707,7 @@ public class GenerateCerts {
 
       File baseDir = new File(targetDir, name);
       if (baseDir.exists()) {
-        List<X509Cert> certs0 = X509Util.parseCerts(new File(baseDir, name + "-certs.pem"));
+        List<CertChoice> certs0 = parseCerts(new File(baseDir, name + "-certs.pem"));
 
         List<PrivateKey> keys = new LinkedList<>();
         try (PemReader pemReader = new PemReader(new FileReader(
@@ -572,7 +728,7 @@ public class GenerateCerts {
               ") != number of existing keys (" + keys.size() + ") for " + name);
         }
 
-        nameCertMap.put(name, certs0.toArray(new X509Cert[0]));
+        nameCertMap.put(name, certs0.toArray(new CertChoice[0]));
 
         System.out.println("keypair and certificate for " + name + " already exist, skipping it");
         continue;
@@ -583,57 +739,102 @@ public class GenerateCerts {
       KeystoreGenerationParameters genParams = new KeystoreGenerationParameters(password);
 
       int size = keyCertConf.entries.size();
-      X509Cert[] thisCerts = new X509Cert[size];
+      CertChoice[] thisCerts = new CertChoice[size];
       PrivateKey[] thisKeys = new PrivateKey[size];
 
       int index = 0;
       for (SingleKeyCert entry : keyCertConf.entries) {
         KeySpec keySpec = KeySpec.ofKeySpec(entry.keyType);
 
-        KeyPairWithSubjectPublicKeyInfo keyPairInfo = X509KeyUtil.generateKeyPair2(keySpec);
-
-        SubjectPublicKeyInfo subjectPublicKeyInfo = keyPairInfo.subjectPublicKeyInfo();
-        KeyPair keyPair = keyPairInfo.keypair();
-
-        Validity validity = Validity.getInstance(entry.validity);
-        X500Name subject = new X500Name(entry.subject);
-        String certType = entry.certType;
-
         KeyStoreAndCert keyStoreAndCert;
+        if (entry.certFormat == CertFormat.C509) {
+          C509KeyPairWithSubjectPublicKeyInfo keyPairInfo = KeyUtil.generateC509KeyPair2(keySpec);
 
-        if (keyCertConf.issuerName() == null) {
-          Signer signer = X509KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic(), true);
+          C509SubjectPublicKey subjectPublicKeyInfo = keyPairInfo.subjectPublicKeyInfo();
+          KeyPair keyPair = keyPairInfo.keypair();
 
-          keyStoreAndCert = generateSelfSignedCertificate(certType, signer.contentSigner(),
-              keyPair.getPrivate(), subjectPublicKeyInfo, genParams, subject, validity);
-        } else {
-          KeyWithCert caKeyCertPair = caKeyAndCertPairMap.get(keyCertConf.issuerName());
-          if (caKeyCertPair == null) {
-            throw new InvalidConfException("unknown CA " + keyCertConf.issuerName());
+          Validity validity = Validity.getInstance(entry.validity);
+          C509Name subject = new C509Name(entry.subject);
+          String certType = entry.certType;
+
+          if (keyCertConf.issuerName() == null) {
+            Signer signer = KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic(), true);
+
+            keyStoreAndCert = generateC509SelfSignedCertificate(certType,
+                signer.contentSigner(), keyPair.getPrivate(), subjectPublicKeyInfo,
+                genParams, subject, validity);
+          } else {
+            KeyWithCert caKeyCertPair = caKeyAndCertPairMap.get(keyCertConf.issuerName());
+            if (caKeyCertPair == null) {
+              throw new InvalidConfException("unknown CA " + keyCertConf.issuerName());
+            }
+            Signer signer = KeyUtil.getSigner(caKeyCertPair.key(), caKeyCertPair.cert().publicKey());
+            keyStoreAndCert = generateC509Certificate(certType, signer.contentSigner(),
+                caKeyCertPair.cert().c509, keyPair.getPrivate(), subjectPublicKeyInfo, genParams,
+                subject, validity);
           }
-          Signer signer = X509KeyUtil.getSigner(caKeyCertPair.key(),
-              caKeyCertPair.cert().publicKey());
-          keyStoreAndCert = generateCertificate(certType, signer.contentSigner(), caKeyCertPair.cert(),
-              keyPair.getPrivate(), subjectPublicKeyInfo, genParams, subject, validity);
-        }
 
-        X509Cert cert = keyStoreAndCert.cert;
-        thisCerts[index] = cert;
-        thisKeys[index] = keyPairInfo.keypair().getPrivate();
+          CertChoice cert = keyStoreAndCert.cert;
+          thisCerts[index] = cert;
+          thisKeys[index] = keyPairInfo.keypair().getPrivate();
+        } else {
+          X509KeyPairWithSubjectPublicKeyInfo keyPairInfo = KeyUtil.generateX509KeyPair2(keySpec);
+
+          SubjectPublicKeyInfo subjectPublicKeyInfo = keyPairInfo.subjectPublicKeyInfo();
+          KeyPair keyPair = keyPairInfo.keypair();
+
+          Validity validity = Validity.getInstance(entry.validity);
+          X500Name subject = new X500Name(entry.subject);
+          String certType = entry.certType;
+
+
+          if (keyCertConf.issuerName() == null) {
+            Signer signer = KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic(), true);
+
+            keyStoreAndCert = generateX509SelfSignedCertificate(certType,
+                signer.contentSigner(), keyPair.getPrivate(), subjectPublicKeyInfo,
+                genParams, subject, validity);
+          } else {
+            KeyWithCert caKeyCertPair = caKeyAndCertPairMap.get(keyCertConf.issuerName());
+            if (caKeyCertPair == null) {
+              throw new InvalidConfException("unknown CA " + keyCertConf.issuerName());
+            }
+            Signer signer = KeyUtil.getSigner(caKeyCertPair.key(), caKeyCertPair.cert().publicKey());
+            keyStoreAndCert = generateX509Certificate(certType, signer.contentSigner(),
+                caKeyCertPair.cert().x509, keyPair.getPrivate(), subjectPublicKeyInfo, genParams,
+                subject, validity);
+          }
+
+          CertChoice cert = keyStoreAndCert.cert;
+          thisCerts[index] = cert;
+          thisKeys[index] = keyPairInfo.keypair().getPrivate();
+        }
         index++;
       }
 
       nameCertMap.put(name, thisCerts);
 
-      IoUtil.save(new File(baseDir, name + "-certs.pem"),
-          Objects.requireNonNull(X509Util.encodeCertificates(thisCerts))
-              .getBytes(StandardCharsets.UTF_8));
+      String pemStr;
+      if (thisCerts[0].x509 != null) {
+        pemStr = X509Util.encodePemCertificates(toX509Certs(thisCerts));
+      } else {
+        pemStr = C509Util.encodePemCertificates(toC509Certs(thisCerts));
+      }
+      assert pemStr != null;
 
-      Pkcs12KeyStore ks = X509KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
+      IoUtil.save(new File(baseDir, name + "-certs.pem"),
+          pemStr.getBytes(StandardCharsets.UTF_8));
+
+      Pkcs12KeyStore ks = KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
 
       for (int i = 0; i < size; i++) {
-        ks.setKeyEntry(name + "-" + (i + 1),
-            PrivateKeyInfo.fromEncoded(thisKeys[i].getEncoded()), thisCerts[i].getCert());
+        String alias = name + "-" + (i + 1);
+        PrivateKeyInfo privateKeyInfo = PrivateKeyInfo.fromEncoded(thisKeys[i].getEncoded());
+        if (thisCerts[i].x509 != null) {
+          ks.setKeyEntry(alias, privateKeyInfo, thisCerts[i].x509.getCert());
+        } else {
+          ks.setC509KeyEntry(alias, privateKeyInfo, thisCerts[i].c509.getCert());
+        }
       }
 
       try (OutputStream keystoreOs = new FileOutputStream(new File(baseDir, name + ".p12"))) {
@@ -672,19 +873,28 @@ public class GenerateCerts {
           continue;
         }
 
-        Pkcs12KeyStore certP12Ks = X509KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
+        Pkcs12KeyStore certP12Ks = KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
         certP12Ks.load((byte[]) null, null);
 
-        List<X509Cert> certs = new ArrayList<>(certstore.keyCertNames.size());
+        List<CertChoice> certs = new ArrayList<>(certstore.keyCertNames.size());
 
         for (String certName : certstore.keyCertNames) {
-          X509Cert[] certs0 = nameCertMap.get(certName);
-          certs.addAll(Arrays.asList(certs0));
+          CertChoice[] certsList = nameCertMap.get(certName);
+          certs.addAll(Arrays.asList(certsList));
 
-          certP12Ks.setCertificateEntry(certName, certs0[0].getCert());
-          if (certs0.length > 1) {
-            for (int i = 1; i < certs0.length; i++) {
-              certP12Ks.setCertificateEntry(certName + "-" + i, certs0[i].getCert());
+          if (certsList[0].x509 != null) {
+            certP12Ks.setCertificateEntry(certName, certsList[0].x509.getCert());
+            if (certsList.length > 1) {
+              for (int i = 1; i < certsList.length; i++) {
+                certP12Ks.setCertificateEntry(certName + "-" + i, certsList[i].x509.getCert());
+              }
+            }
+          } else {
+            certP12Ks.setC509CertificateEntry(certName, certsList[0].c509.getCert());
+            if (certsList.length > 1) {
+              for (int i = 1; i < certsList.length; i++) {
+                certP12Ks.setC509CertificateEntry(certName + "-" + i, certsList[i].c509.getCert());
+              }
             }
           }
         }
@@ -693,28 +903,42 @@ public class GenerateCerts {
           certP12Ks.store(out, certstore.p12Password.toCharArray());
         }
 
+        String pemStr;
+        if (certs.get(0).x509 != null) {
+          pemStr = X509Util.encodePemCertificates(toX509Certs(certs.toArray(new CertChoice[0])));
+        } else {
+          pemStr = C509Util.encodePemCertificates(toC509Certs(certs.toArray(new CertChoice[0])));
+        }
+        assert pemStr != null;
+
         IoUtil.save(new File(baseDir, name + "-certstore.pem"),
-            X509Util.encodeCertificates(certs.toArray(new X509Cert[0]))
-                .getBytes(StandardCharsets.UTF_8));
+            pemStr.getBytes(StandardCharsets.UTF_8));
       }
     }
 
   }
 
-  private static KeyStoreAndCert generateSelfSignedCertificate(
+  private static KeyStoreAndCert generateX509SelfSignedCertificate(
       String certType, ContentSigner signer, PrivateKey privateKey,
       SubjectPublicKeyInfo subjectPublicKeyInfo, KeystoreGenerationParameters params,
       X500Name subject, Validity validity) throws Exception {
-    return generateCertificate(certType, signer, null, privateKey,
+    return generateX509Certificate(certType, signer, null, privateKey,
         subjectPublicKeyInfo, params, subject, validity);
   }
 
-  private static KeyStoreAndCert generateCertificate(
+  private static KeyStoreAndCert generateC509SelfSignedCertificate(
+      String certType, ContentSigner signer, PrivateKey privateKey,
+      C509SubjectPublicKey subjectPublicKeyInfo, KeystoreGenerationParameters params,
+      C509Name subject, Validity validity) throws Exception {
+    return generateC509Certificate(certType, signer, null, privateKey,
+        subjectPublicKeyInfo, params, subject, validity);
+  }
+
+  private static KeyStoreAndCert generateX509Certificate(
       String certType, ContentSigner signer, X509Cert issuerCert, PrivateKey privateKey,
       SubjectPublicKeyInfo subjectPublicKeyInfo, KeystoreGenerationParameters params,
       X500Name subject, Validity validity) throws Exception {
     certType = certType.toUpperCase(Locale.ROOT);
-
     // 10 minutes past
     Instant notBefore = Instant.now().minus(10, ChronoUnit.MINUTES);
     Instant notAfter = validity.add(notBefore);
@@ -781,10 +1005,10 @@ public class GenerateCerts {
           new ExtendedKeyUsage(purposeIds)));
     }
 
-    KeyWithCert identity = new KeyWithCert(new X509Cert(certGenerator.build(signer)), privateKey);
+    Certificate cert = certGenerator.build(signer);
 
-    Pkcs12KeyStore ks = X509KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
-    ks.setKeyEntry("main", PrivateKeyInfo.fromPrivateKey(privateKey), identity.cert().getCert());
+    Pkcs12KeyStore ks = KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
+    ks.setKeyEntry("main", PrivateKeyInfo.fromPrivateKey(privateKey), cert);
 
     ByteArrayOutputStream ksStream = new ByteArrayOutputStream();
     try {
@@ -793,7 +1017,86 @@ public class GenerateCerts {
       ksStream.flush();
     }
 
-    return new KeyStoreAndCert(ksStream.toByteArray(), identity.cert());
+    return new KeyStoreAndCert(ksStream.toByteArray(), new CertChoice(new X509Cert(cert)));
+  }
+
+
+  private static KeyStoreAndCert generateC509Certificate(
+      String certType, ContentSigner signer, C509Cert issuerCert, PrivateKey privateKey,
+      C509SubjectPublicKey subjectPublicKeyInfo, KeystoreGenerationParameters params,
+      C509Name subject, Validity validity) throws Exception {
+    certType = certType.toUpperCase(Locale.ROOT);
+    // 10 minutes past
+    Instant notBefore = Instant.now().minus(10, ChronoUnit.MINUTES);
+    Instant notAfter = validity.add(notBefore);
+
+    BigInteger serialNumber;
+    C509Name issuer;
+    if (issuerCert == null) {
+      serialNumber = BigInteger.ONE;
+      issuer = subject;
+    } else {
+      if (notAfter.isAfter(issuerCert.notAfter())) {
+        notAfter = issuerCert.notAfter();
+      }
+      serialNumber = new BigInteger(72, RandomUtil.random());
+      issuer = issuerCert.subject();
+    }
+
+    // Generate keystore
+    C509CertificateBuilder certGenerator = C509CertificateBuilder.of(subject, subjectPublicKeyInfo)
+        .validity(notBefore, notAfter).serialNumber(serialNumber);
+    if (issuerCert != null) {
+      certGenerator.issuedBy(issuerCert.getCert());
+    }
+
+    boolean isCA = "CA".equalsIgnoreCase(certType);
+    C509BasicConstraints basicConstraints = isCA ? C509BasicConstraints.ca(0)
+        : C509BasicConstraints.END_ENTITY;
+    certGenerator.extension(ConstExtensionId.basicConstraints, true, basicConstraints);
+
+    C509KeyUsage keyUsage = isCA
+        ? C509KeyUsage.of(C509KeyUsage.KEY_CERT_SIGN, C509KeyUsage.CRL_SIGN)
+        : C509KeyUsage.of(C509KeyUsage.DIGITAL_SIGNATURE);
+    certGenerator.extension(ConstExtensionId.keyUsage, true, keyUsage);
+
+    if ("TLS-SERVER".equals(certType) || "TLS-CLIENT".equals(certType) || "TLS".equals(certType)) {
+      List<Long> purposeIds = new LinkedList<>();
+      if ("TLS-SERVER".equals(certType) || "TLS".equals(certType)) {
+        purposeIds.add(ConstExtendedKeyUsage.serverAuth);
+        String commonName = C509Util.getCommonName(subject);
+        if (commonName == null) {
+          throw new InvalidConfException("common name of a TLS certificate must not be null");
+        }
+
+        C509GeneralName generalName = IPAddressUtil.isValid(commonName)
+            ? C509GeneralName.ip(commonName) : C509GeneralName.dns(commonName);
+
+        certGenerator.extension(ConstExtensionId.subjectAltName,
+            false, new C509AltName(C509GeneralNames.of(generalName)));
+      }
+
+      if ("TLS-CLIENT".equals(certType) || "TLS".equals(certType)) {
+        purposeIds.add(ConstExtendedKeyUsage.clientAuth);
+      }
+
+      certGenerator.extension(ConstExtensionId.extKeyUsage, false,
+          new C509ExtKeyUsageSyntax(purposeIds));
+    }
+
+    C509Certificate cert = certGenerator.build(signer);
+
+    Pkcs12KeyStore ks = KeyUtil.loadPKCS12KeyStore((byte[]) null, null);
+    ks.setC509KeyEntry("main", PrivateKeyInfo.fromPrivateKey(privateKey), cert);
+
+    ByteArrayOutputStream ksStream = new ByteArrayOutputStream();
+    try {
+      ks.store(ksStream, params.password());
+    } finally {
+      ksStream.flush();
+    }
+
+    return new KeyStoreAndCert(ksStream.toByteArray(), new CertChoice(new C509Cert(cert)));
   }
 
   private static SecretKey generateSecretKey(String keyType) throws Exception {
@@ -813,16 +1116,16 @@ public class GenerateCerts {
 
   private static class KeyWithCert {
 
-    private final X509Cert cert;
+    private final CertChoice cert;
 
     private final PrivateKey key;
 
-    public KeyWithCert(X509Cert cert, PrivateKey key) {
+    public KeyWithCert(CertChoice cert, PrivateKey key) {
       this.key = key;
       this.cert = cert;
     }
 
-    public X509Cert cert() {
+    public CertChoice cert() {
       return cert;
     }
 
@@ -830,4 +1133,5 @@ public class GenerateCerts {
       return key;
     }
   }
+
 }

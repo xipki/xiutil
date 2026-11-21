@@ -8,7 +8,7 @@ import org.junit.Test;
 import org.xipki.crypto.api.CryptoApi;
 import org.xipki.crypto.api.CryptoApiFactory;
 import org.xipki.crypto.core.SignAlgo;
-import org.xipki.pkix.pkcs12.KeypairWithCert;
+import org.xipki.pkix.pkcs12.X509KeypairWithCert;
 import org.xipki.pkix.pkcs12.P12ContentSignerBuilder;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.sign.ConcurrentSigner;
@@ -53,10 +53,10 @@ public abstract class Pkcs12SignVerifyTest {
     String certFile = getCertificateFile();
     X509Cert cert = X509Util.parseCert(new File(certFile));
 
-    KeypairWithCert keypairWithCert;
+    X509KeypairWithCert keypairWithCert;
     try (InputStream ks = Files.newInputStream(Paths.get(getPkcs12File()))) {
       char[] password = getPassword().toCharArray();
-      keypairWithCert = KeypairWithCert.fromPKCS12Keystore(ks, password, null, password, cert);
+      keypairWithCert = X509KeypairWithCert.fromPKCS12Keystore(ks, password, null, password, cert);
     }
     P12ContentSignerBuilder builder = new P12ContentSignerBuilder(keypairWithCert);
     signer = builder.createSigner(getSignatureAlgorithm(), 1);
@@ -76,7 +76,7 @@ public abstract class Pkcs12SignVerifyTest {
   }
 
   protected byte[] sign(byte[] data) throws Exception {
-    return getSigner().x509Sign(data);
+    return getSigner().atomicX509Sign(data);
   }
 
   protected boolean verify(byte[] data, byte[] signatureValue, X509Cert cert)

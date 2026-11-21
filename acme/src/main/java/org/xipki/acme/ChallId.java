@@ -72,6 +72,10 @@ public class ChallId {
 
   @Override
   public boolean equals(Object other) {
+    if (this == other) {
+      return true;
+    }
+
     if (!(other instanceof ChallId)) {
       return false;
     }

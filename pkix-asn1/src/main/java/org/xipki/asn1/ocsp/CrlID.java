@@ -13,7 +13,9 @@ import org.xipki.codec.asn1.Asn1TaggedObject;
 import org.xipki.codec.asn1.Asn1Util;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
+import org.xipki.codec.util.StringUtil;
 
+import java.math.BigInteger;
 import java.time.Instant;
 
 /**
@@ -36,6 +38,12 @@ public class CrlID extends Asn1Encodable {
     this.crlUrl = crlUrl;
     this.crlNum = crlNum;
     this.crlTime = crlTime;
+  }
+
+  public CrlID(String crlUrl, BigInteger crlNum, Instant crlTime) {
+    this.crlUrl = StringUtil.isBlank(crlUrl) ? null : new Asn1IA5String(crlUrl);
+    this.crlNum = crlNum == null ? null : new Asn1Integer(crlNum);
+    this.crlTime = crlTime == null ? null : new Asn1GeneralizedTime(crlTime);
   }
 
   public static CrlID fromEncoded(byte[] encoded) throws CodecException {

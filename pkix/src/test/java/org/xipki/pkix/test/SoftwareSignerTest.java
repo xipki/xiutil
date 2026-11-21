@@ -5,9 +5,9 @@ package org.xipki.pkix.test;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
 import org.xipki.codec.crypto.ContentSigner;
-import org.xipki.codec.crypto.ContentVerifierProvider;
+import org.xipki.codec.crypto.ContentVerifierFactory;
 import org.xipki.crypto.core.KemEncapKey;
 import org.xipki.crypto.core.KemUtil;
 import org.xipki.crypto.core.KeySpec;
@@ -19,7 +19,6 @@ import org.xipki.pkix.sign.KemHmacSigner;
 import org.xipki.pkix.sign.SignatureSigner;
 import org.xipki.pkix.sign.Signer;
 import org.xipki.pkix.util.KeyUtil;
-import org.xipki.pkix.util.X509KeyUtil;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -53,11 +52,11 @@ public class SoftwareSignerTest {
     byte[] expected = mac.doFinal(DATA);
 
     ContentSigner contentSigner = signer.contentSigner();
-    Assert.assertArrayEquals(expected, contentSigner.atomicSign(DATA));
+    Assert.assertArrayEquals(expected, contentSigner.atomicX509Sign(DATA));
     Assert.assertArrayEquals(expected, signer.x509Sign(DATA));
     for (int i = 0; i < 2; i++) {
       contentSigner.getOutputStream().write(DATA);
-      Assert.assertArrayEquals("streaming " + i, expected, contentSigner.getSignature());
+      Assert.assertArrayEquals("streaming " + i, expected, contentSigner.getX509Signature());
     }
   }
 
@@ -74,10 +73,10 @@ public class SoftwareSignerTest {
     byte[] expected = new KemHmacSignature("key-1", mac.doFinal(DATA)).getEncoded();
 
     ContentSigner contentSigner = signer.contentSigner();
-    Assert.assertArrayEquals(expected, contentSigner.atomicSign(DATA));
+    Assert.assertArrayEquals(expected, contentSigner.atomicX509Sign(DATA));
     for (int i = 0; i < 2; i++) {
       contentSigner.getOutputStream().write(DATA);
-      Assert.assertArrayEquals("streaming " + i, expected, contentSigner.getSignature());
+      Assert.assertArrayEquals("streaming " + i, expected, contentSigner.getX509Signature());
     }
 
     KemHmacSignature decoded = KemHmacSignature.decode(expected);
@@ -98,10 +97,10 @@ public class SoftwareSignerTest {
     ContentSigner signer = new KemHmacSigner(encapKey.id(),
         new SecretKeySpec(macKey, "HMAC-SHA256")).contentSigner();
 
-    ContentVerifierProvider cvp =
-        X509KeyUtil.getContentVerifierProvider(kp.getPublic(), null, masterKey.secretKey());
+    ContentVerifierFactory cvp = KeyUtil.getContentVerifierFactory(
+        kp.getPublic(), null, masterKey.secretKey());
     Assert.assertTrue(cvp.get(SignAlgo.KEM_HMAC_SHA256.algorithmIdentifier())
-        .atomicVerify(DATA, signer.atomicSign(DATA)));
+        .atomicX509Verify(DATA, signer.atomicX509Sign(DATA)));
   }
 
   @Test
@@ -129,18 +128,19 @@ public class SoftwareSignerTest {
     ContentSigner[] contentSigners = {signer.contentSigner(),
         SignatureSigner.newContentSigner(algo, kp.getPrivate())};
     for (ContentSigner contentSigner : contentSigners) {
-      Assert.assertTrue("atomic", verify(jdkName, kp, DATA, contentSigner.atomicSign(DATA)));
+      Assert.assertTrue("atomic", verify(jdkName, kp, DATA,
+          contentSigner.atomicX509Sign(DATA)));
 
       for (int i = 0; i < 2; i++) {
         contentSigner.getOutputStream().write(DATA);
         Assert.assertTrue("streaming " + i,
-            verify(jdkName, kp, DATA, contentSigner.getSignature()));
+            verify(jdkName, kp, DATA, contentSigner.getX509Signature()));
       }
 
       byte[] otherData = DATA.clone();
       otherData[0] ^= 1;
       Assert.assertFalse("other data",
-          verify(jdkName, kp, otherData, contentSigner.atomicSign(DATA)));
+          verify(jdkName, kp, otherData, contentSigner.atomicX509Sign(DATA)));
     }
   }
 
@@ -155,8 +155,7 @@ public class SoftwareSignerTest {
   private static void assertAlgId(SignAlgo algo, Signer signer) {
     Assert.assertArrayEquals(algo.algorithmIdentifier().getEncoded(),
         signer.getEncodedX509AlgId());
-    Assert.assertEquals(algo.algorithmIdentifier(),
-        signer.contentSigner().getAlgorithmIdentifier());
+    Assert.assertEquals(algo.algorithmIdentifier(), signer.contentSigner().x509Algorithm());
   }
 
 }

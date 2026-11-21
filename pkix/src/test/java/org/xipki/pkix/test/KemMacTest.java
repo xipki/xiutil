@@ -8,7 +8,7 @@ import org.junit.Test;
 import org.xipki.codec.asn1.Asn1OctetString;
 import org.xipki.codec.asn1.Asn1Sequence;
 import org.xipki.codec.asn1.Asn1Utf8String;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
 import org.xipki.crypto.api.CryptoApi;
 import org.xipki.crypto.api.CryptoApiFactory;
 import org.xipki.crypto.core.SignAlgo;
@@ -89,7 +89,7 @@ public class KemMacTest {
 
       SecretKey macKey = new SecretKeySpec(secret, "AES");
       HmacSigner verifier = new HmacSigner(SignAlgo.HMAC_SHA256, macKey);
-      byte[] macValue = verifier.contentSigner().atomicSign(data);
+      byte[] macValue = verifier.contentSigner().atomicX509Sign(data);
       boolean valid = Arrays.equals(rawSignature, macValue);
       Assert.assertTrue("signature invalid", valid);
     }

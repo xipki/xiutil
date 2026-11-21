@@ -5,12 +5,12 @@ package org.xipki.pkix.pkcs12;
 
 import org.xipki.asn1.pkcs12.PKCS12PBEParams;
 import org.xipki.codec.asn1.Asn1Oid;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
-import org.xipki.codec.asn1.crypto.PBKDF2Params;
-import org.xipki.codec.asn1.crypto.PBMAC1Params;
-import org.xipki.codec.asn1.oid.NistOIDs;
-import org.xipki.codec.asn1.oid.OiwOIDs;
-import org.xipki.codec.asn1.oid.PkcsOIDs;
+import org.xipki.codec.x509.AlgorithmIdentifier;
+import org.xipki.codec.x509.PBKDF2Params;
+import org.xipki.codec.x509.PBMAC1Params;
+import org.xipki.codec.x509.id.NistOIDs;
+import org.xipki.codec.x509.id.OiwOIDs;
+import org.xipki.codec.x509.id.PkcsOIDs;
 import org.xipki.codec.util.XiArrays;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.crypto.api.AlgorithmNames;

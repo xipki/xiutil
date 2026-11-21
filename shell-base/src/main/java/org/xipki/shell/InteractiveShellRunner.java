@@ -26,6 +26,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 
 /**
  * Runs the interactive shell loop, including terminal setup, history, prompts, and startup output.
@@ -146,16 +147,38 @@ class InteractiveShellRunner {
   private String determineVersion() {
     Class<?> rootClass = shell.commandLine().getCommandSpec().userObject().getClass();
 
-    Package pkg = rootClass.getPackage();
-    if (pkg != null) {
-      String version = pkg.getImplementationVersion();
-      if (ShellUtil.isNotBlank(version)) {
-        return version;
-      }
+    String version = buildVersionFromManifest(rootClass);
+    if (ShellUtil.isNotBlank(version)) {
+      return version;
     }
 
-    String version = versionFromPomProperties(rootClass, shell.commandLine().getCommandName());
+    version = versionFromPomProperties(rootClass, shell.commandLine().getCommandName());
     return ShellUtil.isNotBlank(version) ? version : "unknown";
+  }
+
+  /**
+   * Reads the attribute Build-Version from the manifest of the jar containing the given class.
+   */
+  private static String buildVersionFromManifest(Class<?> clazz) {
+    CodeSource codeSource = clazz.getProtectionDomain().getCodeSource();
+    if (codeSource == null || codeSource.getLocation() == null) {
+      return null;
+    }
+
+    try {
+      Path path = Paths.get(codeSource.getLocation().toURI());
+      if (!Files.isRegularFile(path)) {
+        return null;
+      }
+
+      try (JarFile jar = new JarFile(path.toFile())) {
+        Manifest manifest = jar.getManifest();
+        return manifest == null ? null : manifest.getMainAttributes().getValue("Build-Version");
+      }
+    } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
+      LOG.debug("could not read Build-Version from {}", codeSource.getLocation(), ex);
+    }
+    return null;
   }
 
   /**

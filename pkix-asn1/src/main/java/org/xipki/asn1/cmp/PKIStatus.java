@@ -71,7 +71,7 @@ public class PKIStatus extends Asn1Encodable {
 
   @Override
   public boolean equals(Object o) {
-    if (o == this) {
+    if (this == o) {
       return true;
     }
 

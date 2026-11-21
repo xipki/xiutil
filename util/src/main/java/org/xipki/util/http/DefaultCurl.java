@@ -174,6 +174,10 @@ public class DefaultCurl implements Curl {
 
     @Override
     public boolean equals(Object other) {
+      if (this == other) {
+        return true;
+      }
+
       if (other instanceof UrlPattern) {
         return toString.equals(((UrlPattern) other).toString);
       }

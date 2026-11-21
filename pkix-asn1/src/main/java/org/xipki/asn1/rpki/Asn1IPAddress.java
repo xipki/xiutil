@@ -6,7 +6,7 @@ import org.xipki.codec.asn1.Asn1BitString;
 import org.xipki.codec.asn1.DerivedBitString;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
-import org.xipki.codec.ipadress.Rfc3779IPAddress;
+import org.xipki.codec.util.Rfc3779IPAddress;
 
 /**
  * ASN1 IPAddress.

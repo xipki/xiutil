@@ -4,8 +4,8 @@
 package org.xipki.asn1.tcg;
 
 import org.xipki.codec.asn1.*;
-import org.xipki.codec.asn1.crypto.SubjectPublicKeyInfo;
-import org.xipki.codec.asn1.oid.TcgOIDs;
+import org.xipki.codec.x509.SubjectPublicKeyInfo;
+import org.xipki.codec.x509.id.TcgOIDs;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 

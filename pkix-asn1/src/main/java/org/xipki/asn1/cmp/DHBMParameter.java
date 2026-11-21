@@ -6,7 +6,7 @@ package org.xipki.asn1.cmp;
 import org.xipki.codec.asn1.Asn1Encodable;
 import org.xipki.codec.asn1.Asn1Primitive;
 import org.xipki.codec.asn1.Asn1Sequence;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
+import org.xipki.codec.x509.AlgorithmIdentifier;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 

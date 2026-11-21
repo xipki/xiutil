@@ -16,10 +16,10 @@ import org.bouncycastle.operator.DefaultAlgorithmNameFinder;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.xipki.asn1.x509.Certificate;
 import org.xipki.codec.exception.GenerationException;
-import org.xipki.codec.asn1.crypto.AlgorithmIdentifier;
+import org.xipki.codec.x509.AlgorithmIdentifier;
 import org.xipki.codec.crypto.ContentSigner;
 import org.xipki.codec.crypto.ContentVerifier;
-import org.xipki.codec.crypto.ContentVerifierProvider;
+import org.xipki.codec.crypto.ContentVerifierFactory;
 import org.xipki.crypto.core.SignAlgo;
 
 import java.io.ByteArrayOutputStream;
@@ -126,13 +126,13 @@ public class TestUtil {
       private final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
       @Override
-      public AlgorithmIdentifier getAlgorithmIdentifier() {
+      public AlgorithmIdentifier x509Algorithm() {
         return algId;
       }
 
       @Override
-      public Integer getC509AlgorithmIdentifier() {
-        return c509AlgId;
+      public int c509Algorithm() {
+        return ContentSigner.checkC509AlgId(c509AlgId, algId.getAlgorithm());
       }
 
       @Override
@@ -142,7 +142,7 @@ public class TestUtil {
       }
 
       @Override
-      public byte[] getSignature() throws SignatureException {
+      public byte[] getX509Signature() throws SignatureException {
         try {
           Signature sig = Signature.getInstance(jceAlg, BC);
           sig.initSign(key);
@@ -156,11 +156,11 @@ public class TestUtil {
   }
 
   /**
-   * A {@link ContentVerifierProvider} with JCA {@link Signature}, the algorithm name is
+   * A {@link ContentVerifierFactory} with JCA {@link Signature}, the algorithm name is
    * resolved by BouncyCastle.
    */
-  public static ContentVerifierProvider verifierProvider(PublicKey key, Certificate cert) {
-    return new ContentVerifierProvider() {
+  public static ContentVerifierFactory verifierProvider(PublicKey key, Certificate cert) {
+    return new ContentVerifierFactory() {
       @Override
       public boolean hasAssociatedCertificate() {
         return cert != null;
@@ -176,13 +176,13 @@ public class TestUtil {
           throws GenerationException {
         return new ContentVerifier() {
           @Override
-          public AlgorithmIdentifier getAlgorithmIdentifier() {
+          public AlgorithmIdentifier x509Algorithm() {
             return algId;
           }
 
           @Override
-          public Integer getC509AlgorithmIdentifier() {
-            return c509AlgId;
+          public int c509Algorithm() {
+            return ContentSigner.checkC509AlgId(c509AlgId, algId.getAlgorithm());
           }
 
           @Override
@@ -192,7 +192,7 @@ public class TestUtil {
           }
 
           @Override
-          public boolean verify(byte[] signature) throws SignatureException {
+          public boolean x509Verify(byte[] signature) throws SignatureException {
             try {
               Signature sig = Signature.getInstance(name, BC);
               sig.initVerify(key);

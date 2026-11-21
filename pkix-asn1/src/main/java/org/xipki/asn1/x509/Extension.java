@@ -21,7 +21,7 @@ import org.xipki.asn1.tcg.TcgUeid;
 import org.xipki.asn1.x509.qualified.BiometricSyntax;
 import org.xipki.asn1.x509.qualified.QCStatements;
 import org.xipki.codec.asn1.*;
-import org.xipki.codec.asn1.oid.ExtensionOIDs;
+import org.xipki.codec.x509.id.ExtensionOIDs;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
 
@@ -187,6 +187,9 @@ public class Extension extends Asn1Encodable {
 
   // id_pe_tlsfeature = new Asn1Oid("1.3.6.1.5.5.7.1.24");
   private TLSFeatures tlsFeatures;
+
+  // id-pe-acmeIdentifier = new Asn1Oid("1.3.6.1.5.5.7.1.31"),
+  private Asn1OctetString acmeAuthorization;
 
   // id_DMTF_SPDM_extension = new Asn1Oid("1.3.6.1.4.1.412.274.6")
   private SpdmCertOids spdmExtension;
@@ -596,6 +599,13 @@ public class Extension extends Asn1Encodable {
     return extn;
   }
 
+  public static Extension ofAcmeAuthorization(boolean critical, Asn1OctetString value) {
+    Args.notNull(value, "value");
+    Extension extn = create2(ExtensionOIDs.id_pe_acmeIdentifier, critical, value);
+    extn.acmeAuthorization = value;
+    return extn;
+  }
+
   public static Extension ofSpdmExtension(boolean critical, SpdmCertOids value) {
     Args.notNull(value, "value");
     Extension extn = create2(ExtensionOIDs.id_dmtf_spdm_extension, critical, value);
@@ -894,6 +904,8 @@ public class Extension extends Asn1Encodable {
       iPAddrBlocksV2 = IPAddrBlocks.fromEncoded(octets);
     } else if (id.equals(ExtensionOIDs.id_pe_tlsfeature.getId())) {
       tlsFeatures = TLSFeatures.fromEncoded(octets);
+    } else if (id.equals(ExtensionOIDs.id_pe_acmeIdentifier.getId())) {
+      acmeAuthorization = Asn1OctetString.fromEncoded(octets);
     } else if (id.equals(ExtensionOIDs.id_dmtf_spdm_extension.getId())) {
       spdmExtension = SpdmCertOids.fromEncoded(octets);
     } else if (id.equals(ExtensionOIDs.id_ccc_F_External_CA_Cert.getId())) {
@@ -1143,6 +1155,10 @@ public class Extension extends Asn1Encodable {
     return tlsFeatures;
   }
 
+  public Asn1OctetString getAcmeAuthorization() {
+    return acmeAuthorization;
+  }
+
   public SpdmCertOids getSpdmExtension() {
     return spdmExtension;
   }
@@ -1350,6 +1366,8 @@ public class Extension extends Asn1Encodable {
       return iPAddrBlocksV2;
     } else if (tlsFeatures != null) {
       return tlsFeatures;
+    } else if (acmeAuthorization != null) {
+      return acmeAuthorization;
     } else if (spdmExtension != null) {
       return spdmExtension;
     } else if (CCC_F_External_CACert != null) {
