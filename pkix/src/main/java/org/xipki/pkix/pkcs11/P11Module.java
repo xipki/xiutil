@@ -15,7 +15,7 @@ import org.xipki.pkcs11.wrapper.Slot;
 import org.xipki.pkcs11.wrapper.TokenException;
 import org.xipki.pkcs11.wrapper.type.CkSlotInfo;
 import org.xipki.pkcs11.wrapper.type.CkTokenInfo;
-import org.xipki.util.io.XipkiIoUtil;
+import org.xipki.codec.util.IoUtil;
 import org.xipki.util.misc.CollectionUtil;
 import org.xipki.util.misc.LogUtil;
 import org.xipki.util.password.PasswordResolverException;
@@ -206,7 +206,7 @@ public class P11Module {
     }
 
     String path = moduleConf.nativeLibrary();
-    path = XipkiIoUtil.expandFilepath(path, false);
+    path = IoUtil.resolvePath(null, path);
 
     PKCS11Module module;
     try {

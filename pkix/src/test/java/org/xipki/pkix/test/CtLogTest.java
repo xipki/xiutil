@@ -11,7 +11,7 @@ import org.xipki.asn1.x509.Certificate;
 import org.xipki.asn1.x509.Extension;
 import org.xipki.codec.x509.id.ExtensionOIDs;
 import org.xipki.pkix.util.X509Util;
-import org.xipki.util.io.XipkiIoUtil;
+import org.xipki.codec.util.IoUtil;
 
 /**
  * CTLog test.
@@ -35,7 +35,7 @@ public class CtLogTest {
   }
 
   private void parseCtLogInCert(String certFile) throws Exception {
-    byte[] certBytes = XipkiIoUtil.readAllBytesAndClose( getClass().getResourceAsStream(certFile));
+    byte[] certBytes = IoUtil.readAllBytesAndClose( getClass().getResourceAsStream(certFile));
     certBytes = X509Util.toDerEncoded(certBytes);
     Certificate cert = Certificate.fromEncoded(certBytes);
     Extension extn = cert.getTBSCertificate().getExtensions().getExtension(

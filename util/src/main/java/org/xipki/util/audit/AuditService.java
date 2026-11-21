@@ -17,11 +17,25 @@ public interface AuditService {
 
   int PCI_AUDIT_EVENT = 2;
 
-  default void init(String conf) throws InvalidConfException {
-    init(new ConfPairs(conf));
+  /**
+   * Initializes the audit service.
+   * @param conf the configuration.
+   * @param basedir the base directory, against which relative paths are resolved. May be
+   *                {@code null}.
+   * @throws InvalidConfException if the configuration is invalid.
+   */
+  default void init(String conf, String basedir) throws InvalidConfException {
+    init(new ConfPairs(conf), basedir);
   }
 
-  void init(ConfPairs conf) throws InvalidConfException;
+  /**
+   * Initializes the audit service.
+   * @param conf the configuration.
+   * @param basedir the base directory, against which relative paths are resolved. May be
+   *                {@code null}.
+   * @throws InvalidConfException if the configuration is invalid.
+   */
+  void init(ConfPairs conf, String basedir) throws InvalidConfException;
 
   /**
    * Log audit event.

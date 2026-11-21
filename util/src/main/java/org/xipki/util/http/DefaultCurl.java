@@ -15,7 +15,6 @@ import org.xipki.codec.json.JsonMap;
 import org.xipki.codec.json.JsonParser;
 import org.xipki.codec.util.StringUtil;
 import org.xipki.util.misc.LogUtil;
-import org.xipki.util.io.XipkiIoUtil;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -423,7 +422,7 @@ public class DefaultCurl implements Curl {
 
       if (inputStream != null) {
         if (respContentStream == null) {
-          result.setContent(XipkiIoUtil.readAllBytesAndClose(inputStream));
+          result.setContent(IoUtil.readAllBytesAndClose(inputStream));
         } else {
           byte[] buffer = new byte[8192];
           int read;
@@ -435,7 +434,7 @@ public class DefaultCurl implements Curl {
           result.setContentLength(contentLength);
         }
       } else if (errorStream != null) {
-        result.setErrorContent(XipkiIoUtil.readAllBytesAndClose(errorStream));
+        result.setErrorContent(IoUtil.readAllBytesAndClose(errorStream));
       }
 
       return result;

@@ -18,7 +18,7 @@ import org.xipki.crypto.core.HashAlgo;
 import org.xipki.crypto.core.KeyInfoUtil;
 import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.util.X509Util;
-import org.xipki.util.io.XipkiIoUtil;
+import org.xipki.codec.util.IoUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -83,7 +83,7 @@ public class CtLogVerifyTest {
     if (is == null) {
       throw new IOException("could not find " + name);
     }
-    return XipkiIoUtil.readAllBytesAndClose(is);
+    return IoUtil.readAllBytesAndClose(is);
   }
 
 }

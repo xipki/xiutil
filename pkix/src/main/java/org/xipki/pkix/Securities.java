@@ -112,11 +112,22 @@ public class Securities implements Closeable {
   }
 
   public void init(SecurityConf conf) throws InvalidConfException {
+    init(conf, null);
+  }
+
+  /**
+   * Initializes the security factory.
+   * @param conf the configuration, may be {@code null}.
+   * @param basedir the base directory, against which relative files (PKCS#11 configuration,
+   *                PKCS#12 keystores, CSR control) are resolved. May be {@code null}.
+   * @throws InvalidConfException if the configuration is invalid.
+   */
+  public void init(SecurityConf conf, String basedir) throws InvalidConfException {
     if (conf == null) {
       conf = SecurityConf.DEFAULT;
     }
 
-    initSecurityFactory(conf);
+    initSecurityFactory(conf, basedir);
   }
 
   @Override
@@ -131,9 +142,10 @@ public class Securities implements Closeable {
     }
   } // method close
 
-  private void initSecurityFactory(SecurityConf conf)
+  private void initSecurityFactory(SecurityConf conf, String basedir)
       throws InvalidConfException {
     securityFactory = new SecurityFactoryImpl();
+    securityFactory.setBasedir(basedir);
 
     securityFactory.setDefaultSignerParallelism(conf.defaultSignerParallelism());
 
@@ -142,11 +154,11 @@ public class Securities implements Closeable {
     securityFactory.setSignerFactoryRegister(signerFactoryRegister);
 
     // PKCS#12 (software)
-    signerFactoryRegister.registFactory(new P12SignerFactory());
+    signerFactoryRegister.registFactory(new P12SignerFactory(basedir));
 
     // PKCS#11
     if (conf.pkcs11Conf() != null) {
-      initSecurityPkcs11(conf.pkcs11Conf(), signerFactoryRegister);
+      initSecurityPkcs11(conf.pkcs11Conf(), basedir, signerFactoryRegister);
     }
 
     // register additional SignerFactories
@@ -164,11 +176,11 @@ public class Securities implements Closeable {
   } // method initSecurityFactory
 
   private void initSecurityPkcs11(
-      FileOrValue pkcs11Conf, SignerFactoryRegister signerFactoryRegister)
+      FileOrValue pkcs11Conf, String basedir, SignerFactoryRegister signerFactoryRegister)
       throws InvalidConfException {
     p11CryptServiceFactory = new P11CryptServiceFactory();
 
-    P11SystemConf pkcs11ConfObj = P11SystemConf.parse(pkcs11Conf);
+    P11SystemConf pkcs11ConfObj = P11SystemConf.parse(pkcs11Conf, basedir);
     p11CryptServiceFactory.setPkcs11Conf(pkcs11ConfObj);
     p11CryptServiceFactory.init();
 

@@ -10,7 +10,7 @@ import org.xipki.codec.exception.InvalidConfException;
 import org.xipki.codec.util.StringUtil;
 import org.xipki.util.audit.services.MacAuditService;
 import org.xipki.util.misc.LogUtil;
-import org.xipki.util.io.XipkiIoUtil;
+import org.xipki.codec.util.IoUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -99,7 +99,8 @@ public class DatabaseMacAuditService extends MacAuditService {
   }
 
   @Override
-  protected void doExtraInit(ConfPairs confPairs) throws InvalidConfException {
+  protected void doExtraInit(ConfPairs confPairs, String basedir)
+      throws InvalidConfException {
     String dataSourceFile = confPairs.value(KEY_DATASOURCE);
     if (StringUtil.isBlank(dataSourceFile)) {
       throw new IllegalArgumentException("property " + KEY_DATASOURCE + " not defined");
@@ -108,8 +109,8 @@ public class DatabaseMacAuditService extends MacAuditService {
     Connection conn = null;
     try {
       try (InputStream is = Files.newInputStream(
-          Paths.get(XipkiIoUtil.expandFilepath(dataSourceFile, true)))) {
-        datasource = new DataSourceFactory().createDataSource("audit", is);
+          Paths.get(IoUtil.resolvePath(basedir, dataSourceFile)))) {
+        datasource = new DataSourceFactory().createDataSource("audit", is, basedir);
       }
 
       conn = datasource.getConnection();

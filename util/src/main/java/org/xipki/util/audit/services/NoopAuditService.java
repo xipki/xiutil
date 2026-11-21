@@ -19,7 +19,7 @@ public class NoopAuditService implements AuditService {
   }
 
   @Override
-  public void init(ConfPairs conf) {
+  public void init(ConfPairs conf, String basedir) {
   }
 
   @Override

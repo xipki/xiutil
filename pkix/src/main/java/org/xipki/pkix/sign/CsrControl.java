@@ -60,12 +60,23 @@ public class CsrControl {
   }
 
   public CsrControl(CsrControlConf conf) throws InvalidConfException {
+    this(conf, null);
+  }
+
+  /**
+   * Constructor.
+   * @param conf the configuration.
+   * @param basedir the base directory, against which relative files are resolved. May be
+   *                {@code null}.
+   * @throws InvalidConfException if the configuration is invalid.
+   */
+  public CsrControl(CsrControlConf conf, String basedir) throws InvalidConfException {
     if (conf.peerCerts() == null) {
       this.peerX509Certs = null;
       this.peerC509Certs = null;
     } else {
       try {
-        String certPem = conf.peerCerts().readContent();
+        String certPem = conf.peerCerts().readContent(basedir);
         if (certPem.contains("BEGIN C509 CERTIFICATE")) {
           this.peerX509Certs = null;
           this.peerC509Certs = C509Util.parseCerts(StringUtil.toUtf8Bytes(certPem));
@@ -95,7 +106,7 @@ public class CsrControl {
       throw new InvalidConfException("error resolving password");
     }
 
-    try (InputStream is = new ByteArrayInputStream(kemConf.keystore().readContent())) {
+    try (InputStream is = new ByteArrayInputStream(kemConf.keystore().readContent(basedir))) {
       ks = KeyUtil.loadKeyStore(kemConf.type(), is, password);
     } catch (XiSecurityException | IOException ex) {
       throw new InvalidConfException("error loading keystore", ex);

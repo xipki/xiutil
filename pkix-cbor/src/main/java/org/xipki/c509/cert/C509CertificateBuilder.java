@@ -59,7 +59,7 @@ public final class C509CertificateBuilder {
 
   private TripleState issuerAltName = TripleState.forbidden;
 
-  private boolean autoSubjectKeyId;
+  private boolean autoSubjectKeyId = true;
 
   private C509CertificateBuilder(C509Name subject, C509SubjectPublicKey publicKey) {
     this.subject = Args.notNull(subject, "subject");

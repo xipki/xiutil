@@ -5,7 +5,6 @@ package org.xipki.pkix.auth;
 
 import org.xipki.asn1.x509.Certificate;
 import org.xipki.c509.cert.C509Certificate;
-import org.xipki.codec.util.IoUtil;
 import org.xipki.codec.util.StringUtil;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.exception.CodecException;
@@ -18,12 +17,11 @@ import org.xipki.pkix.cert.X509Cert;
 import org.xipki.pkix.util.C509Util;
 import org.xipki.pkix.util.X509Util;
 import org.xipki.util.conf.FileOrBinary;
-import org.xipki.util.io.XipkiIoUtil;
+import org.xipki.codec.util.IoUtil;
 import org.xipki.util.misc.CollectionUtil;
 import org.xipki.util.password.PasswordResolverException;
 import org.xipki.util.password.Passwords;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -407,11 +405,11 @@ public class SimpleRequestorAuthenticator implements RequestorAuthenticator {
   }
 
   @Override
-  public void init(String conf) throws XiSecurityException {
+  public void init(String conf, String basedir) throws XiSecurityException {
     String confFile = StringUtil.isBlank(conf) ? "etc/simple-requestors.json" : conf;
     try {
       JsonMap root = JsonParser.parseMap(
-          Path.of(XipkiIoUtil.expandFilepath(confFile, true)), true);
+          Path.of(IoUtil.resolvePath(basedir, confFile)), true);
 
       Set<MyPasswordRequestor> passwordRequestors0 = null;
       JsonList list = root.getList("passwords");
@@ -443,7 +441,7 @@ public class SimpleRequestorAuthenticator implements RequestorAuthenticator {
           if (jCert.file() == null) {
             certBytes = jCert.binary();
           } else {
-            certBytes = IoUtil.read(XipkiIoUtil.expandFilepath(new File(jCert.file()), true));
+            certBytes = IoUtil.read(basedir, jCert.file());
           }
 
           certBytes = X509Util.toDerEncoded(certBytes);

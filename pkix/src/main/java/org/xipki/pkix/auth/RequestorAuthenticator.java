@@ -14,7 +14,14 @@ import org.xipki.pkix.cert.X509Cert;
  */
 public interface RequestorAuthenticator {
 
-  void init(String conf) throws XiSecurityException;
+  /**
+   * Initializes the authenticator.
+   * @param conf the configuration.
+   * @param basedir the base directory, against which relative files are resolved. May be
+   *                {@code null}.
+   * @throws XiSecurityException if error occurs while initializing the authenticator.
+   */
+  void init(String conf, String basedir) throws XiSecurityException;
 
   /**
    * Return the password-based requestor for given keyID. Used by CMP gateway.

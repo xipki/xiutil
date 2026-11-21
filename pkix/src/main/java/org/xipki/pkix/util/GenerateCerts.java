@@ -123,6 +123,14 @@ public class GenerateCerts {
       return (x509 != null) ? x509.notAfter() : c509.notAfter();
     }
 
+    public byte[] pemEncode() {
+      if (x509 != null) {
+        return PemEncoder.encode(x509.getEncoded(), PemEncoder.PemLabel.CERTIFICATE);
+      } else {
+        return PemEncoder.encode(c509.getEncoded(), PemEncoder.PemLabel.C509_CERTIFICATE);
+      }
+    }
+
   }
 
   private static class Conf {
@@ -689,9 +697,7 @@ public class GenerateCerts {
         caKeyAndCertPairMap.put(name, new KeyWithCert(cert, keyPair.getPrivate()));
       }
 
-      byte[] certBytes = cert.getEncoded();
-      IoUtil.save(new File(baseDir, name + "-cert.pem"),
-          PemEncoder.encode(certBytes, PemEncoder.PemLabel.CERTIFICATE));
+      IoUtil.save(new File(baseDir, name + "-cert.pem"), cert.pemEncode());
 
       IoUtil.save(new File(baseDir, name + ".p12"), keyStoreAndCert.keystoreBytes);
       byte[] keyBytes = keyPair.getPrivate().getEncoded();
@@ -1031,16 +1037,13 @@ public class GenerateCerts {
     Instant notAfter = validity.add(notBefore);
 
     BigInteger serialNumber;
-    C509Name issuer;
     if (issuerCert == null) {
       serialNumber = BigInteger.ONE;
-      issuer = subject;
     } else {
       if (notAfter.isAfter(issuerCert.notAfter())) {
         notAfter = issuerCert.notAfter();
       }
       serialNumber = new BigInteger(72, RandomUtil.random());
-      issuer = issuerCert.subject();
     }
 
     // Generate keystore

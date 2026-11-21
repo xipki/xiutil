@@ -60,7 +60,7 @@ public class SecurityFactoryImpl implements SecurityFactory {
 
   private SignerFactoryRegister signerFactoryRegister;
 
-  private String csrConfFile = "xipki/etc/csr.json";
+  private String basedir;
 
   private CsrControl csrControl;
 
@@ -72,6 +72,14 @@ public class SecurityFactoryImpl implements SecurityFactory {
   public SecurityFactoryImpl() {
   }
 
+  /**
+   * Sets the base directory, against which relative files are resolved.
+   * @param basedir the base directory, may be {@code null}.
+   */
+  public void setBasedir(String basedir) {
+    this.basedir = basedir;
+  }
+
   @Override
   public Set<String> supportedSignerTypes() {
     return signerFactoryRegister.supportedSignerTypes();
@@ -80,20 +88,19 @@ public class SecurityFactoryImpl implements SecurityFactory {
   @Override
   public CsrControl csrControl() {
     if (csrControl == null) {
-      Path confFilePath = null;
-      // ignore if file does not exist or is not configured.
-      if (csrConfFile != null) {
-        confFilePath = Path.of(IoUtil.expandFilepath(csrConfFile));
-        if (!Files.exists(confFilePath)) {
-          confFilePath = null;
-        }
+      // ignore if file does not exist.
+      String csrConfFile = basedir == null ? "xipki/etc/csr.json"
+          : IoUtil.resolvePath(basedir, "etc/csr.json");
+      Path confFilePath = Path.of(csrConfFile);
+      if (!Files.exists(confFilePath)) {
+        confFilePath = null;
       }
 
       if (confFilePath != null) {
         try {
           JsonMap root = JsonParser.parseMap(confFilePath, true);
           CsrControl.CsrControlConf conf = CsrControl.CsrControlConf.parse(root);
-          this.csrControl = new CsrControl(conf);
+          this.csrControl = new CsrControl(conf, basedir);
         } catch (Exception e) {
           LogUtil.error(LOG, e, "error initializing CsrControl with conf file " + csrConfFile);
         }

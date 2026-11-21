@@ -22,7 +22,7 @@ import org.xipki.pkix.sign.SignerConf;
 import org.xipki.pkix.sign.SignerFactory;
 import org.xipki.crypto.core.EcCurveEnum;
 import org.xipki.codec.exception.InvalidConfException;
-import org.xipki.util.io.XipkiIoUtil;
+import org.xipki.codec.util.IoUtil;
 import org.xipki.util.password.PasswordResolverException;
 import org.xipki.util.password.Passwords;
 
@@ -46,6 +46,21 @@ public class P12SignerFactory implements SignerFactory {
   private static final String TYPE_JCEKS = "jceks";
 
   private static final Set<String> types = Set.of(TYPE_PKCS12, TYPE_JCEKS);
+
+  private final String basedir;
+
+  public P12SignerFactory() {
+    this(null);
+  }
+
+  /**
+   * Constructor.
+   * @param basedir the base directory, against which a relative keystore file
+   *                ({@code file:<path>}) is resolved. May be {@code null}.
+   */
+  public P12SignerFactory(String basedir) {
+    this.basedir = basedir;
+  }
 
   @Override
   public Set<String> getSupportedSignerTypes() {
@@ -244,13 +259,13 @@ public class P12SignerFactory implements SignerFactory {
     return password;
   }
 
-  private static InputStream getInputStream(String str) throws GenerationException {
+  private InputStream getInputStream(String str) throws GenerationException {
     if (StringUtil.startsWithIgnoreCase(str, "base64:")) {
       return new ByteArrayInputStream(Base64.decode(str.substring(7))); // "base64:".length() = 7
     } else if (StringUtil.startsWithIgnoreCase(str, "file:")) {
       String fn = str.substring(5); // "file:".length() = 5
       try {
-        return Files.newInputStream(Paths.get(XipkiIoUtil.detectPath(fn)));
+        return Files.newInputStream(Paths.get(IoUtil.resolvePath(basedir, fn)));
       } catch (IOException ex) {
         throw new GenerationException("file not found: " + fn);
       }

@@ -72,7 +72,14 @@ public class Audits {
     }
   } // method getAuditService
 
-  public static void init(String auditType, ConfPairs auditConf) {
+  /**
+   * Initializes the audit service.
+   * @param auditType the audit type.
+   * @param auditConf the configuration.
+   * @param basedir the base directory, against which relative paths are resolved. May be
+   *                {@code null}.
+   */
+  public static void init(String auditType, ConfPairs auditConf, String basedir) {
     try {
       AuditService service;
       if ("embed".equalsIgnoreCase(auditType)) {
@@ -89,7 +96,7 @@ public class Audits {
         service = ReflectiveUtil.newInstance(className);
       }
 
-      service.init(auditConf);
+      service.init(auditConf, basedir);
       auditService = service;
     } catch (RuntimeException ex) {
       initializationException = ex;

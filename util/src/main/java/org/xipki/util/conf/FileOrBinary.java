@@ -10,7 +10,6 @@ import org.xipki.codec.Hex;
 import org.xipki.codec.json.JsonEncodable;
 import org.xipki.codec.json.JsonList;
 import org.xipki.codec.json.JsonMap;
-import org.xipki.util.io.XipkiIoUtil;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -61,11 +60,21 @@ public class FileOrBinary implements JsonEncodable {
   }
 
   public byte[] readContent() throws IOException {
+    return readContent(null);
+  }
+
+  /**
+   * Returns the content. A relative file is resolved against {@code basedir}.
+   * @param basedir the base directory, may be {@code null}.
+   * @return the content.
+   * @throws IOException if error occurs while reading the file.
+   */
+  public byte[] readContent(String basedir) throws IOException {
     if (binary != null) {
       return binary;
     }
 
-    return IoUtil.read(XipkiIoUtil.detectPath(file));
+    return IoUtil.read(IoUtil.resolvePath(basedir, file));
   }
 
   @Override

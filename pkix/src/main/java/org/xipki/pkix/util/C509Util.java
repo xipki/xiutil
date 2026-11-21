@@ -747,6 +747,19 @@ public class C509Util {
 
   public static List<C509Cert> parseCerts(List<FileOrBinary> certsConf)
       throws InvalidConfException {
+    return parseCerts(certsConf, null);
+  }
+
+  /**
+   * Parses the certificates.
+   * @param certsConf the certificates, or the files containing them.
+   * @param basedir the base directory, against which relative files are resolved. May be
+   *                {@code null}.
+   * @return the parsed certificates.
+   * @throws InvalidConfException if a certificate could not be parsed.
+   */
+  public static List<C509Cert> parseCerts(List<FileOrBinary> certsConf, String basedir)
+      throws InvalidConfException {
     if (CollectionUtil.isEmpty(certsConf)) {
       return Collections.emptyList();
     }
@@ -755,7 +768,7 @@ public class C509Util {
 
     for (FileOrBinary m : certsConf) {
       try {
-        C509Cert cert = parseCert(m.readContent());
+        C509Cert cert = parseCert(m.readContent(basedir));
         certs.add(cert);
       } catch (CertificateException | IOException ex) {
         String msg = "could not parse the certificate";

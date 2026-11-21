@@ -6,7 +6,7 @@ package org.xipki.util.http;
 import org.xipki.codec.exception.GenerationException;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.Base64;
-import org.xipki.util.io.XipkiIoUtil;
+import org.xipki.codec.util.IoUtil;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -99,7 +99,7 @@ public class XiHttpClient {
     InputStream inputstream = respCode == HttpURLConnection.HTTP_OK
         ? conn.getInputStream() : conn.getErrorStream();
     byte[] content = inputstream == null ? new byte[0]
-        : XipkiIoUtil.readAllBytesAndClose(inputstream);
+        : IoUtil.readAllBytesAndClose(inputstream);
     if (content.length > 0) {
       String encoding = conn.getHeaderField("content-transfer-encoding");
       if (encoding != null && "base64".equalsIgnoreCase(encoding.trim())) {

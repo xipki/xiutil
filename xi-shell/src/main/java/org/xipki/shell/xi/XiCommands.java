@@ -7,7 +7,6 @@ import org.xipki.codec.Base64;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.util.IoUtil;
 import org.xipki.codec.util.StringUtil;
-import org.xipki.util.io.XipkiIoUtil;
 import org.xipki.shell.Completion;
 import org.xipki.shell.ShellBaseCommand;
 import org.xipki.shell.ShellUtil;
@@ -661,7 +660,7 @@ class XiCommands {
     @Override
     public void run() {
       try {
-        List<String> args = splitCommand(XipkiIoUtil.expandFilepath(command, false));
+        List<String> args = splitCommand(IoUtil.resolvePath(null, command));
         ProcessBuilder pb = new ProcessBuilder(args);
         if (envs != null) {
           for (String env : envs) {

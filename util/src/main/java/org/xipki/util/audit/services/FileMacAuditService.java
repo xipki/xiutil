@@ -11,7 +11,6 @@ import org.xipki.codec.util.StringUtil;
 import org.xipki.util.misc.DateUtil;
 import org.xipki.util.misc.LogUtil;
 import org.xipki.codec.util.IoUtil;
-import org.xipki.util.io.XipkiIoUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -97,12 +96,13 @@ public class FileMacAuditService extends MacAuditService {
   }
 
   @Override
-  protected void doExtraInit(ConfPairs confPairs) throws InvalidConfException {
+  protected void doExtraInit(ConfPairs confPairs, String basedir)
+      throws InvalidConfException {
     String filePath = confPairs.value(KEY_FILE);
     if (StringUtil.isBlank(filePath)) {
       throw new IllegalArgumentException("property " + KEY_FILE + " not defined");
     }
-    filePath = XipkiIoUtil.expandFilepath(StringUtil.resolveVariables(filePath), true);
+    filePath = IoUtil.resolvePath(basedir, StringUtil.resolveVariables(filePath));
 
     File logFile = new File(filePath).getAbsoluteFile();
     this.logDir = logFile.getParentFile();

@@ -36,7 +36,18 @@ public class Passwords {
   private Passwords() {
   }
 
-  private static synchronized void init() {
+  private static void init() {
+    init(null);
+  }
+
+  /**
+   * Initializes the password resolvers. The configuration file is specified by the system
+   * property {@code XIPKI_PASSWORD_CFG}. If it is not set and {@code basedir} is not
+   * {@code null}, the file {@code basedir/security/password.cfg} is used if it exists.
+   * Only the first call has effect.
+   * @param basedir the base directory, may be {@code null}.
+   */
+  public static synchronized void init(String basedir) {
     if (initialized) {
       return;
     }
@@ -44,13 +55,8 @@ public class Passwords {
     try {
       Properties sysProps = System.getProperties();
       String confFile = sysProps.getProperty("XIPKI_PASSWORD_CFG");
-      if (confFile == null) {
-        String xipkiBase = sysProps.getProperty("XIPKI_BASE");
-        if (xipkiBase == null) {
-          xipkiBase = "xipki";
-        }
-
-        Path p = Paths.get(xipkiBase, "security", "password.cfg");
+      if (confFile == null && basedir != null) {
+        Path p = Paths.get(basedir, "security", "password.cfg");
         if (Files.exists(p)) {
           confFile = p.toString();
         }

@@ -15,7 +15,6 @@ import org.xipki.util.audit.PciAuditEvent;
 import org.xipki.util.misc.DateUtil;
 import org.xipki.util.misc.LogUtil;
 import org.xipki.codec.util.IoUtil;
-import org.xipki.util.io.XipkiIoUtil;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -74,7 +73,7 @@ public class EmbedAuditService implements AuditService {
   }
 
   @Override
-  public void init(ConfPairs conf) throws InvalidConfException {
+  public void init(ConfPairs conf, String basedir) throws InvalidConfException {
     if (conf == null) {
       conf = new ConfPairs();
     }
@@ -106,7 +105,7 @@ public class EmbedAuditService implements AuditService {
 
     logFilePath = StringUtil.isBlank(logFilePath)
         ? "logs/audit.log" : StringUtil.resolveVariables(logFilePath);
-    logFilePath = XipkiIoUtil.expandFilepath(logFilePath, true);
+    logFilePath = IoUtil.resolvePath(basedir, logFilePath);
 
     File logFile = new File(logFilePath).getAbsoluteFile();
     this.logDir = logFile.getParentFile();

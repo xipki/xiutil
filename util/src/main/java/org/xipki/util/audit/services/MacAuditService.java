@@ -112,7 +112,8 @@ public abstract class MacAuditService implements AuditService {
 
   protected abstract void doClose() throws Exception;
 
-  protected void doExtraInit(ConfPairs confPairs) throws InvalidConfException {
+  protected void doExtraInit(ConfPairs confPairs, String basedir)
+      throws InvalidConfException {
   }
 
   protected void verify(long id, String tag, String integrityText, ConfPairs confPairs) {
@@ -195,7 +196,7 @@ public abstract class MacAuditService implements AuditService {
   }
 
   @Override
-  public void init(ConfPairs conf) throws InvalidConfException {
+  public void init(ConfPairs conf, String basedir) throws InvalidConfException {
     if (conf == null) {
       conf = new ConfPairs();
     }
@@ -250,7 +251,7 @@ public abstract class MacAuditService implements AuditService {
     }
 
     this.rnd = RandomUtil.random();
-    doExtraInit(conf);
+    doExtraInit(conf, basedir);
   }
 
   @Override

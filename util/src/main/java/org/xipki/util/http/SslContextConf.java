@@ -42,6 +42,8 @@ public class SslContextConf {
 
   private final String sslHostnameVerifier;
 
+  private final String basedir;
+
   private SSLContext sslContext;
 
   private SSLSocketFactory sslSocketFactory;
@@ -53,12 +55,42 @@ public class SslContextConf {
   private boolean initFailed;
 
   public SslContextConf(FileOrBinary[] sslTrustanchors, String sslHostnameVerifier) {
-    this(null, null, null, sslTrustanchors, sslHostnameVerifier);
+    this(sslTrustanchors, sslHostnameVerifier, null);
+  }
+
+  /**
+   * Constructor.
+   * @param sslTrustanchors the trust anchors.
+   * @param sslHostnameVerifier the hostname verifier.
+   * @param basedir the base directory, against which relative files are resolved. May be
+   *                {@code null}.
+   */
+  public SslContextConf(
+      FileOrBinary[] sslTrustanchors, String sslHostnameVerifier, String basedir) {
+    this(null, null, null, sslTrustanchors, sslHostnameVerifier, basedir);
   }
 
   public SslContextConf(
       String sslStoreType, FileOrBinary sslKeystore, String sslKeystorePassword,
       FileOrBinary[] sslTrustanchors, String sslHostnameVerifier) {
+    this(sslStoreType, sslKeystore, sslKeystorePassword, sslTrustanchors,
+        sslHostnameVerifier, null);
+  }
+
+  /**
+   * Constructor.
+   * @param sslStoreType the keystore type.
+   * @param sslKeystore the keystore.
+   * @param sslKeystorePassword the password of the keystore.
+   * @param sslTrustanchors the trust anchors.
+   * @param sslHostnameVerifier the hostname verifier.
+   * @param basedir the base directory, against which relative files are resolved. May be
+   *                {@code null}.
+   */
+  public SslContextConf(
+      String sslStoreType, FileOrBinary sslKeystore, String sslKeystorePassword,
+      FileOrBinary[] sslTrustanchors, String sslHostnameVerifier, String basedir) {
+    this.basedir = basedir;
     this.sslStoreType = sslStoreType;
     this.sslKeystore = sslKeystore;
     this.sslKeystorePassword = sslKeystorePassword;
@@ -84,7 +116,7 @@ public class SslContextConf {
 
       if (sslKeystore != null) {
         char[] password = Passwords.resolvePassword(sslKeystorePassword);
-        try (InputStream is = new ByteArrayInputStream(sslKeystore.readContent())) {
+        try (InputStream is = new ByteArrayInputStream(sslKeystore.readContent(basedir))) {
           builder.loadKeyMaterial(is, password, password);
         }
       }
@@ -96,7 +128,7 @@ public class SslContextConf {
 
         int idx = 1;
         for (FileOrBinary fb : sslTrustanchors) {
-          byte[] bytes = fb.readContent();
+          byte[] bytes = fb.readContent(basedir);
           if (CompareUtil.areEqual(bytes, 0, PEM_PREFIX, 0, PEM_PREFIX.length)) {
             try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(new ByteArrayInputStream(bytes)))) {
@@ -158,8 +190,12 @@ public class SslContextConf {
   }
 
   public static SslContextConf ofSslConf(SslConf ssl) {
+    return ofSslConf(ssl, null);
+  }
+
+  public static SslContextConf ofSslConf(SslConf ssl, String basedir) {
     return new SslContextConf(ssl.storeType(), ssl.keystore(),
-        ssl.keystorePassword(), ssl.trustanchors(), ssl.hostnameVerifier());
+        ssl.keystorePassword(), ssl.trustanchors(), ssl.hostnameVerifier(), basedir);
   }
 
 }

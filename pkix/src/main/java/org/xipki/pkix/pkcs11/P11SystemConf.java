@@ -452,8 +452,21 @@ public class P11SystemConf {
   }
 
   public static P11SystemConf parse(FileOrValue fileOrValue) throws InvalidConfException {
+    return parse(fileOrValue, null);
+  }
+
+  /**
+   * Parses the configuration.
+   * @param fileOrValue the configuration, or the file containing it.
+   * @param basedir the base directory, against which a relative file is resolved. May be
+   *                {@code null}.
+   * @return the parsed configuration.
+   * @throws InvalidConfException if the configuration is invalid.
+   */
+  public static P11SystemConf parse(FileOrValue fileOrValue, String basedir)
+      throws InvalidConfException {
     try {
-      return parse(JsonParser.parseMap(fileOrValue.readContent(), true));
+      return parse(JsonParser.parseMap(fileOrValue.readContent(basedir), true));
     } catch (CodecException | IOException e) {
       throw new InvalidConfException(e);
     }

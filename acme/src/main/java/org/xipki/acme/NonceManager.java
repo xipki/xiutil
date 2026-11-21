@@ -6,6 +6,7 @@ package org.xipki.acme;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xipki.codec.Base64;
+import org.xipki.codec.util.IoUtil;
 import org.xipki.util.misc.LogUtil;
 import org.xipki.util.misc.RandomUtil;
 
@@ -45,10 +46,19 @@ public class NonceManager {
 
   private final SecureRandom rnd = RandomUtil.random();
 
-  public NonceManager(int nonceNumBytes) {
+  private final String nonceFile;
+
+  /**
+   * Constructor.
+   * @param nonceNumBytes number of bytes of a nonce.
+   * @param basedir the base directory, in which the unused nonces are saved in the file
+   *                {@code .nonces}. If {@code null}, the working directory is used.
+   */
+  public NonceManager(int nonceNumBytes, String basedir) {
     this.nonceNumBytes = nonceNumBytes;
+    this.nonceFile = IoUtil.resolvePath(basedir, ".nonces");
     // read saved nonces (which are still valid) from file.
-    File nonceFile = new File(".nonces");
+    File nonceFile = new File(this.nonceFile);
     if (!nonceFile.exists()) {
       return;
     }
@@ -133,7 +143,7 @@ public class NonceManager {
 
     // save the unused nonces
     int sum = 0;
-    try (OutputStream os = Files.newOutputStream(Paths.get(".nonces"),
+    try (OutputStream os = Files.newOutputStream(Paths.get(nonceFile),
         StandardOpenOption.CREATE, StandardOpenOption.WRITE,
         StandardOpenOption.TRUNCATE_EXISTING)) {
       for (Map.Entry<String, Long> entry : noncePool.entrySet()) {

@@ -17,7 +17,9 @@ import org.xipki.codec.util.Args;
 import org.xipki.util.http.XiHttpFilter;
 import org.xipki.util.http.XiHttpRequest;
 import org.xipki.util.http.XiHttpResponse;
+import org.xipki.util.password.Passwords;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -32,18 +34,68 @@ public abstract class ServletFilter implements Filter {
 
   private static final Logger LOG = LoggerFactory.getLogger(ServletFilter.class);
 
+  /**
+   * Name of the context parameter that specifies the base directory, against which relative
+   * paths in the configuration are resolved. The default is set in the web application's
+   * {@code web.xml} ({@code ${catalina.base}/xipki}) and can be overridden in Tomcat's
+   * {@code conf/context.xml} with {@code <Parameter ... override="false"/>}.
+   */
+  public static final String PARAM_BASEDIR = "xipki.basedir";
+
   private XiHttpFilter filter0;
 
-  protected abstract XiHttpFilter initFilter(FilterConfig filterConfig) throws Exception;
+  /**
+   * Creates the filter.
+   * @param filterConfig the filter configuration.
+   * @param basedir the base directory (absolute and canonical), against which relative paths
+   *                in the configuration are resolved.
+   * @return the filter.
+   * @throws Exception if error occurs while creating the filter.
+   */
+  protected abstract XiHttpFilter initFilter(FilterConfig filterConfig, String basedir)
+      throws Exception;
 
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {
     try {
-      filter0 = initFilter(filterConfig);
+      String basedir = getBasedir(filterConfig);
+      Passwords.init(basedir);
+      filter0 = initFilter(filterConfig, basedir);
+    } catch (ServletException ex) {
+      LOG.error("error initializing ServletFilter: {}", ex.getMessage());
+      throw ex;
     } catch (Exception ex) {
       LOG.error("error initializing ServletFiler", ex);
       throw new ServletException(ex);
     }
+  }
+
+  private static String getBasedir(FilterConfig filterConfig) throws ServletException {
+    String str = filterConfig.getServletContext().getInitParameter(PARAM_BASEDIR);
+    if (str == null || str.isBlank()) {
+      throw new ServletException("context parameter " + PARAM_BASEDIR + " is not set");
+    }
+
+    File dir = new File(str.trim());
+    if (!dir.isAbsolute()) {
+      throw new ServletException("context parameter " + PARAM_BASEDIR
+          + " is not an absolute path: " + str);
+    }
+
+    if (!dir.isDirectory()) {
+      throw new ServletException("context parameter " + PARAM_BASEDIR
+          + " is not an existing directory: " + str);
+    }
+
+    String basedir;
+    try {
+      basedir = dir.getCanonicalPath();
+    } catch (IOException ex) {
+      basedir = dir.getAbsolutePath();
+    }
+
+    LOG.info("use basedir {}", basedir);
+    return basedir;
   }
 
   @Override
