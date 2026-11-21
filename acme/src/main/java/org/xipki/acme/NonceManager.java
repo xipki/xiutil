@@ -61,8 +61,19 @@ public class NonceManager {
       String line;
       while ((line = reader.readLine()) != null) {
         StringTokenizer tokenizer = new StringTokenizer(line, ":");
+        if (tokenizer.countTokens() != 2) {
+          LOG.warn("ignored invalid line in .nonces");
+          continue;
+        }
+
         String nonce = tokenizer.nextToken();
-        long notAfter = Math.min(maxNotAftter, Long.parseLong(tokenizer.nextToken(), 16));
+        long notAfter;
+        try {
+          notAfter = Math.min(maxNotAftter, Long.parseLong(tokenizer.nextToken(), 16));
+        } catch (NumberFormatException ex) {
+          LOG.warn("ignored invalid line in .nonces");
+          continue;
+        }
 
         if (notAfter > now) {
           sum++;
@@ -123,7 +134,8 @@ public class NonceManager {
     // save the unused nonces
     int sum = 0;
     try (OutputStream os = Files.newOutputStream(Paths.get(".nonces"),
-        StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+        StandardOpenOption.CREATE, StandardOpenOption.WRITE,
+        StandardOpenOption.TRUNCATE_EXISTING)) {
       for (Map.Entry<String, Long> entry : noncePool.entrySet()) {
         if (entry.getValue() < now) {
           continue;
