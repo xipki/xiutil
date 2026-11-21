@@ -50,6 +50,16 @@ public abstract class ShellBaseCommand implements Runnable {
   }
 
   /**
+   * Returns the line reader of the interactive shell.
+   *
+   * @return the line reader, or {@code null} if the command does not run in the interactive
+   *         shell.
+   */
+  protected LineReader lineReader() {
+    return PicocliShell.activeLineReader();
+  }
+
+  /**
    * Reads a secret (e.g. a password) from the console without echo, or from stdin if no console
    * is available.
    *

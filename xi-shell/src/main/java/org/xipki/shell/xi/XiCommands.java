@@ -3,6 +3,8 @@
 
 package org.xipki.shell.xi;
 
+import org.jline.reader.History;
+import org.jline.reader.LineReader;
 import org.xipki.codec.Base64;
 import org.xipki.codec.util.Args;
 import org.xipki.codec.util.IoUtil;
@@ -23,6 +25,8 @@ import picocli.CommandLine.Parameters;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,6 +35,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -638,6 +643,51 @@ class XiCommands {
     @Override
     public void run() {
       println(Paths.get("").toAbsolutePath().normalize().toString());
+    }
+  }
+
+  @Command(name = "history", description = "show or clear the command history",
+      mixinStandardHelpOptions = true)
+  static class HistoryCommand extends ShellBaseCommand {
+
+    @Parameters(index = "0", arity = "0..1", description = "number of most recent entries to show")
+    private Integer count;
+
+    @Option(names = {"--clear", "-c"}, description = "clear the command history")
+    private boolean clear;
+
+    @Override
+    public void run() {
+      LineReader reader = lineReader();
+      if (reader == null) {
+        throw new IllegalStateException(
+            "the command history is only available in the interactive shell");
+      }
+
+      History history = reader.getHistory();
+      if (clear) {
+        try {
+          history.purge();
+        } catch (IOException ex) {
+          throw new RuntimeException("could not clear the command history: " + ex.getMessage(), ex);
+        }
+        return;
+      }
+
+      if (count != null && count < 0) {
+        throw new IllegalArgumentException("count must not be negative: " + count);
+      }
+
+      // the numbers are those used by the event designator !n
+      int start = (count == null) ? history.first() : Math.max(history.first(),
+          history.last() - count + 1);
+      PrintWriter out = out();
+      ListIterator<History.Entry> it = history.iterator(start);
+      while (it.hasNext()) {
+        History.Entry entry = it.next();
+        out.printf("%5d  %s%n", entry.index() + 1, entry.line());
+      }
+      out.flush();
     }
   }
 

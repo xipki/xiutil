@@ -35,6 +35,7 @@ public class XiShellMain {
       XiCommands.DateTime.class,
       XiCommands.OsInfo.class,
       XiCommands.Pwd.class,
+      XiCommands.HistoryCommand.class,
       XiCommands.ExecTerminalCommand.class
   }, mixinStandardHelpOptions = true)
   /**
