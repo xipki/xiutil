@@ -62,23 +62,26 @@ public final class C509TBSCertificate extends C509SignedBody {
       int type, BigInteger serialNumber, int signatureAlgorithm,
       C509Name issuer, C509Name subject, Instant notBefore, Instant notAfter,
       C509SubjectPublicKey subjectPublicKey, C509Extensions extensions) {
-    if (type != TYPE_NATIVE && type != TYPE_RECODED_X509) {
-      throw new IllegalArgumentException("invalid certificate type " + type);
-    }
+    this.type = Args.among(type, "certificate type", TYPE_NATIVE);
+
     if (Args.notNull(serialNumber, "serialNumber").signum() < 0) {
       throw new IllegalArgumentException("negative serialNumber");
     }
-    this.type = type;
-    this.serialNumber = serialNumber;
+    this.serialNumber = Args.notNull(serialNumber, "serialNumber");
     this.signatureAlgorithm = signatureAlgorithm;
     this.subject = Args.notNull(subject, "subject");
     this.issuer = issuer == null ? subject : issuer;
     this.notBefore = Args.notNull(notBefore, "notBefore").truncatedTo(ChronoUnit.SECONDS);
 
-    Instant end = (notAfter == null) ? NO_EXPIRY : notAfter.truncatedTo(ChronoUnit.SECONDS);
-    if (end.isAfter(NO_EXPIRY)) {
+    Instant end;
+    if (notAfter == null) {
       end = NO_EXPIRY;
+    } else if (notAfter.isAfter(NO_EXPIRY)) {
+      end = NO_EXPIRY;
+    } else {
+      end = notAfter.truncatedTo(ChronoUnit.SECONDS);
     }
+
     if (this.notBefore.isAfter(end)) {
       throw new IllegalArgumentException("notBefore is after notAfter");
     }
@@ -161,11 +164,7 @@ public final class C509TBSCertificate extends C509SignedBody {
     out.writeLong(type);
     out.writeUnwrappedBiguint(serialNumber);
     out.writeInt(signatureAlgorithm);
-    if (isSelfSigned()) {
-      out.writeNull();
-    } else {
-      issuer.encode(out);
-    }
+    out.writeObject(isSelfSigned() ? null : issuer);
     out.writeUnwrappedTime(notBefore);
     if (expires()) {
       out.writeUnwrappedTime(notAfter);

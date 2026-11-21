@@ -39,27 +39,27 @@ public final class C509Certificate extends C509Signed<C509TBSCertificate> {
   }
 
   public BigInteger serialNumber() {
-    return body().serialNumber();
+    return body.serialNumber();
   }
 
   public C509Name issuer() {
-    return body().issuer();
+    return body.issuer();
   }
 
   public C509Name subject() {
-    return body().subject();
+    return body.subject();
   }
 
   public boolean isSelfSigned() {
-    return body().isSelfSigned();
+    return body.isSelfSigned();
   }
 
   public Instant notBefore() {
-    return body().notBefore();
+    return body.notBefore();
   }
 
   public Instant notAfter() {
-    return body().notAfter();
+    return body.notAfter();
   }
 
   public boolean isValidAt(Instant time) {
@@ -67,19 +67,19 @@ public final class C509Certificate extends C509Signed<C509TBSCertificate> {
   }
 
   public int type() {
-    return body().type();
+    return body.type();
   }
 
   public C509SubjectPublicKey subjectPublicKey() {
-    return body().subjectPublicKey();
+    return body.subjectPublicKey();
   }
 
   public C509Extension getExtension(long extensionId) {
-    return body().getExtension(extensionId);
+    return body.getExtension(extensionId);
   }
 
   public C509Extensions extensions() {
-    return body().extensions();
+    return body.extensions();
   }
 
   public <T extends C509ExtnValue> T extension(long id, Class<T> type) {

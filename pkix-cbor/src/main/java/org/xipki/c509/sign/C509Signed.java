@@ -25,7 +25,7 @@ import java.security.SignatureException;
  */
 public abstract class C509Signed<B extends C509SignedBody> extends C509CborItem {
 
-  private final B body;
+  protected final B body;
 
   private final SignatureValue signature;
 

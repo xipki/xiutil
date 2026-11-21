@@ -178,6 +178,7 @@ public class RevocationAndStatusTest {
   public void crlIssuerNeedsSubjectKeyId() throws Exception {
     C509Certificate noSki = C509CertificateBuilder
         .of(new C509Name("CN=CA without SKI"), caKey.subjectPublicKey())
+        .autoSubjectKeyId(false)
         .extension(C509Extension.critical(ConstExtensionId.keyUsage,
             C509KeyUsage.of(C509KeyUsage.CRL_SIGN, C509KeyUsage.KEY_CERT_SIGN)))
         .build(caSigner());
@@ -204,6 +205,7 @@ public class RevocationAndStatusTest {
   public void issuerWithoutSubjectKeyIdRejected() throws Exception {
     C509Certificate noSki = C509CertificateBuilder
         .of(new C509Name("CN=no SKI"), caKey.subjectPublicKey())
+        .autoSubjectKeyId(false)
         .build(caSigner());
     C509CertificateBuilder.of(new C509Name("CN=child"),
         responderKey.subjectPublicKey()).issuedBy(noSki).build(caSigner());

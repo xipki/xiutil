@@ -163,13 +163,28 @@ public final class C509PerIssuerRevokedCerts extends C509CborItem {
     List<Entry> list = new ArrayList<>(data.length / size);
     for (int off = 0; off < data.length; off += size) {
       BigInteger serial = new BigInteger(1, data, off, sn);
-      // TODO: replace BigInteger with quick convert
-      Long date = dl == 0 ? null : layout.baseDate() +
-          new BigInteger(1, data, off + sn, dl).longValueExact();
+      Long date = dl == 0 ? null : layout.baseDate() + unsignedBigEndian(data, off + sn, dl);
       Integer reason = reasons ? (data[off + sn + dl] & 0xFF) : null;
       list.add(new Entry(serial, date, reason));
     }
     return Collections.unmodifiableList(list);
+  }
+
+  /**
+   * Reads an unsigned big-endian integer of {@code len} (at most 8) bytes.
+   * @throws ArithmeticException if the value does not fit in a long, i.e. 8 bytes with the most
+   *         significant bit set.
+   */
+  private static long unsignedBigEndian(byte[] data, int off, int len) {
+    long value = 0;
+    for (int i = 0; i < len; i++) {
+      value = (value << 8) | (data[off + i] & 0xFF);
+    }
+
+    if (value < 0) {
+      throw new ArithmeticException("unsigned value out of long range");
+    }
+    return value;
   }
 
   public static C509PerIssuerRevokedCerts read(CborDecoder in) throws CodecException {
