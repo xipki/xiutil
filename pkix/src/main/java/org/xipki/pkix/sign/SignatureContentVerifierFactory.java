@@ -68,7 +68,8 @@ public class SignatureContentVerifierFactory implements ContentVerifierFactory {
     }
 
     @Override
-    public boolean atomicX509Verify(byte[] toBeSignData, byte[] signature) throws SignatureException {
+    public boolean atomicX509Verify(byte[] toBeSignData, byte[] signature)
+        throws SignatureException {
       try {
         Signature sig = cryptoApi.newSignature(algorithm.jceName());
         sig.initVerify(verifyKey);

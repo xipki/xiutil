@@ -10,7 +10,6 @@ import org.xipki.codec.cbor.CborType;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.util.Args;
 
-
 /**
  * An ASN.1 object identifier, carried in CBOR as the byte string of its DER content octets.
  *

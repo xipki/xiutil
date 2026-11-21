@@ -83,7 +83,7 @@ public final class ConstExtensionId {
       .put(ocsp_pref_sig_algs, "PreferredSignatureAlgorithms")
       .put(ocsp_stir_tn, "TNQuery")
       .put(vendor_acmeIdentifier, "acmeIdentifier")
-      
+
       .withConstants(ConstExtensionId.class);
 
   private ConstExtensionId() {

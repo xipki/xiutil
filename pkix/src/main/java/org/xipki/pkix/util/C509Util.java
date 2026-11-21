@@ -210,7 +210,6 @@ public class C509Util {
     }
   }
 
-
   public static String toPemCert(C509Cert cert) {
     return StringUtil.toUtf8String(PemEncoder.encode(
         notNull(cert, "cert").getEncoded(), PemEncoder.PemLabel.C509_CERTIFICATE));
@@ -531,7 +530,6 @@ public class C509Util {
 
     return issues;
   } // method issues
-
 
   public static String cutC509Name(C509Name name, int maxLen) {
     return X509Util.cutText(nameText(name), maxLen);

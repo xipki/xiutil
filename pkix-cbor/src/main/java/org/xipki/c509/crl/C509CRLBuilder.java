@@ -48,8 +48,7 @@ public final class C509CRLBuilder {
    *                  identifier.
    */
   public C509CRLBuilder(
-      long crlNumber, C509Certificate authority, Instant thisUpdate,
-      Instant nextUpdate) {
+      long crlNumber, C509Certificate authority, Instant thisUpdate, Instant nextUpdate) {
     if (crlNumber <= 0) {
       throw new IllegalArgumentException("crlNumber must be positive");
     }
@@ -81,8 +80,7 @@ public final class C509CRLBuilder {
   public C509CRLBuilder extension(long id, boolean critical, C509ExtnValue value) {
     C509Extension e = new C509Extension(id, critical, value);
     if (extensions.putIfAbsent(id, e) != null) {
-      throw new IllegalArgumentException(
-          "duplicate extension " + ConstExtensionId.describe(id));
+      throw new IllegalArgumentException("duplicate extension " + ConstExtensionId.describe(id));
     }
     return this;
   }
@@ -104,8 +102,7 @@ public final class C509CRLBuilder {
    * the same issuer returns the same group, provided the options are equal.
    */
   public C509PerIssuerRevokedCertsBuilder group(
-      C509Name issuer, boolean sorted, boolean withDates,
-      boolean withReasons) {
+      C509Name issuer, boolean sorted, boolean withDates, boolean withReasons) {
     return group(C509NameVariant.ofC509(issuer), sorted, withDates, withReasons);
   }
 
@@ -114,8 +111,7 @@ public final class C509CRLBuilder {
    * the same issuer returns the same group, provided the options are equal.
    */
   public C509PerIssuerRevokedCertsBuilder group(
-      C509NameVariant issuer, boolean sorted,
-      boolean withDates, boolean withReasons) {
+      C509NameVariant issuer, boolean sorted, boolean withDates, boolean withReasons) {
     C509NameVariant key = issuer.equals(authoritySubject()) ? null : issuer;
     for (C509PerIssuerRevokedCertsBuilder g : groups) {
       if (Objects.equals(key, g.issuer())) {

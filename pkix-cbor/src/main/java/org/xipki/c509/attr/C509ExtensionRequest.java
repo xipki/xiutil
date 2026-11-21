@@ -10,7 +10,6 @@ import org.xipki.codec.cbor.CborEncoder;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.util.Args;
 
-
 /**
  * The extension request attribute of a certification request.
  *

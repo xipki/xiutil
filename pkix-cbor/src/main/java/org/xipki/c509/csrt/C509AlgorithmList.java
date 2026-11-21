@@ -12,7 +12,6 @@ import org.xipki.codec.cbor.CborEncoder;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.util.Args;
 
-
 /**
  * A non-empty array of algorithm identifiers, as used by the request template.
  *

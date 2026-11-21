@@ -215,7 +215,6 @@ public class P12SignerFactory implements SignerFactory {
     return new X509P12XdhMacSignerBuilder(keypairWithCert, peerCert);
   }
 
-
   private static C509P12XdhMacSignerBuilder getP12XdhMacContentSignerBuilder(
       SignerConf conf, C509KeypairWithCert keypairWithCert)
       throws GenerationException, XiSecurityException {

@@ -12,7 +12,6 @@ import org.xipki.codec.cbor.CborEncoder;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.util.Args;
 
-
 /**
  * The private key possession statement attribute
  * (draft-ietf-cose-cbor-encoded-cert-21, Section 4.3.3).

@@ -65,18 +65,7 @@ public final class C509ChangeSubjectName extends C509AttrValue {
 
   @Override
   protected void writeTo(CborEncoder out) throws CodecException {
-    out.writeArrayStart(2);
-    if (subject == null) {
-      out.writeNull();
-    } else {
-      subject.encode(out);
-    }
-
-    if (subjectAlt == null) {
-      out.writeNull();
-    } else {
-      subjectAlt.encode(out);
-    }
+    out.writeObjects(subject, subjectAlt);
   }
 
   @Override

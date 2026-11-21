@@ -8,7 +8,6 @@ import org.xipki.codec.cbor.CborEncoder;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.util.Args;
 
-
 /**
  * A type identifier together with an opaque value, used for the otherName and
  * hardwareModuleName general names (draft-ietf-cose-cbor-encoded-cert-21, Section 3.3).

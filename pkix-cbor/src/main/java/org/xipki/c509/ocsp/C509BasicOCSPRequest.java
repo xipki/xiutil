@@ -213,7 +213,6 @@ public final class C509BasicOCSPRequest extends C509CborItem implements C509OCSP
     }
   }
 
-
   @Override
   protected void render(C509TextTree out) {
     out.kv("kind", C509OCSPRequest.Kind.BASIC);

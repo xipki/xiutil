@@ -11,7 +11,6 @@ import org.xipki.codec.cbor.CborEncoder;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.util.Args;
 
-
 /**
  * A policy qualifier, e.g. a CPS URI or a user notice.
  *

@@ -1,3 +1,6 @@
+// Copyright (c) 2013-2026 xipki. All rights reserved.
+// License Apache License 2.0
+
 package org.xipki.c509.ocsp;
 
 import org.xipki.c509.ext.C509Extensions;
@@ -6,6 +9,14 @@ import org.xipki.codec.util.Args;
 import java.math.BigInteger;
 import java.time.Instant;
 
+/**
+ * The decoded status of one certificate in a C509 OCSP response: serial number, status,
+ * thisUpdate and nextUpdate, and the single-response extensions. Unlike the encoded response,
+ * where thisUpdate and nextUpdate are offsets in seconds from producedAt, the times here are
+ * absolute.
+ *
+ * @author Lijun Liao (xipki)
+ */
 public class C509CertStatusInfo {
 
   private final BigInteger serialNumber;

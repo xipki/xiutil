@@ -12,7 +12,6 @@ import org.xipki.codec.cbor.CborEncoder;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.util.Args;
 
-
 /**
  * A name in one of several encodings, selected by the certificate type
  * ({@link ConstCertificateType}).

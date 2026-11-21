@@ -118,5 +118,4 @@ public class SignerFactoryRegister {
     throw new GenerationException("could not find Factory to create Signer of type " + type);
   }
 
-
 }

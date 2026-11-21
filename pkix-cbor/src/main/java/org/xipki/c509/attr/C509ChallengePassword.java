@@ -9,7 +9,6 @@ import org.xipki.codec.cbor.CborEncoder;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.util.Args;
 
-
 /**
  * The challenge password attribute. The text form never shows the password.
  *

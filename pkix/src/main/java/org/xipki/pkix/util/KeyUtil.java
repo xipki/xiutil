@@ -229,7 +229,6 @@ public class KeyUtil {
     return result;
   } // method generateX509KeyPair3
 
-
   public static C509Pkcs12KeyStoreWrapper generateC509KeyPair3(
       KeySpec keySpec, KeystoreGenerationParameters params) throws Exception {
     C509KeyPairWithSubjectPublicKeyInfo kp = generateC509KeyPair2(keySpec);

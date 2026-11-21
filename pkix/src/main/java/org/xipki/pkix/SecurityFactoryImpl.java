@@ -183,7 +183,8 @@ public class SecurityFactoryImpl implements SecurityFactory {
   }
 
   @Override
-  public PublicKey generatePublicKey(C509SubjectPublicKey subjectPublicKeyInfo) throws InvalidKeyException {
+  public PublicKey generatePublicKey(C509SubjectPublicKey subjectPublicKeyInfo)
+      throws InvalidKeyException {
     try {
       return KeyInfoUtil.getPublicKey(subjectPublicKeyInfo);
     } catch (InvalidKeySpecException ex) {

@@ -136,7 +136,8 @@ public final class C509CertificateBuilder {
     return this;
   }
 
-  public C509Certificate build(AtomicContentSigner signer) throws CodecException, SignatureException {
+  public C509Certificate build(AtomicContentSigner signer)
+      throws CodecException, SignatureException {
     C509TBSCertificate body = body(signer.c509Algorithm());
     return new C509Certificate(body, signer.atomicC509Sign(body.getEncoded()));
   }
@@ -190,7 +191,7 @@ public final class C509CertificateBuilder {
         ? C509AuthorityKeyIdentifier.ofKeyId(keyId)
         : C509AuthorityKeyIdentifier.ofIssuerAndSerial(keyId,
             C509GeneralNames.of(C509GeneralName.directory(issuer.subject())),
-                issuer.serialNumber());
+            issuer.serialNumber());
     return C509Extension.nonCritical(ConstExtensionId.authorityKeyIdentifier, value);
   }
 

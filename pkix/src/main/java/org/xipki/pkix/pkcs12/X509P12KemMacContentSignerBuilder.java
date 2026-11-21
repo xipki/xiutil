@@ -38,7 +38,8 @@ public class X509P12KemMacContentSignerBuilder {
 
   private final String id;
 
-  public X509P12KemMacContentSignerBuilder(X509KeypairWithCert keypairWithCert, KemEncapKey encapKey)
+  public X509P12KemMacContentSignerBuilder(
+      X509KeypairWithCert keypairWithCert, KemEncapKey encapKey)
       throws XiSecurityException {
     this.keypairWithCert = Args.notNull(keypairWithCert, "keypairWithCert");
     Args.notNull(encapKey, "encapKey");

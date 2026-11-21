@@ -13,7 +13,6 @@ import org.xipki.codec.cbor.CborDecoder;
 import org.xipki.codec.cbor.CborEncoder;
 import org.xipki.codec.exception.CodecException;
 
-
 /**
  * A private key with its optional certificate (chain):
  * <pre>

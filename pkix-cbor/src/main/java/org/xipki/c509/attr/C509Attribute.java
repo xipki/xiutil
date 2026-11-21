@@ -39,10 +39,8 @@ public final class C509Attribute extends C509CborItem implements Comparable<C509
       .bind(C509ChangeSubjectName.class, C509ChangeSubjectName::read,
           ConstAttributeType.changeSubjectName)
       .bind(C509DateOfBirth.class, C509DateOfBirth::read, ConstAttributeType.dateOfBirth)
-      .bind(C509TextAttrValue.class, C509TextAttrValue::read,
-          ConstAttributeType.placeOfBirth)
-      .bind(C509TextAttrValue.class, C509TextAttrValue::read,
-          ConstAttributeType.gender)
+      .bind(C509TextAttrValue.class, C509TextAttrValue::read, ConstAttributeType.placeOfBirth)
+      .bind(C509TextAttrValue.class, C509TextAttrValue::read, ConstAttributeType.gender)
       .bind(C509TextAttrValue.class, C509TextAttrValue::read,
           ConstAttributeType.countryOfCitizenship)
       .bind(C509TextAttrValue.class, C509TextAttrValue::read,

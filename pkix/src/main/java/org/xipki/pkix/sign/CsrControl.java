@@ -157,7 +157,6 @@ public class CsrControl {
     return KemUtil.generateKemEncapKey(publicKey, defaultKemMasterKey);
   }
 
-
   public KemEncapKey generateKemEncapKey(C509SubjectPublicKey publicKey)
       throws XiSecurityException {
     if (defaultKemMasterKey == null) {

@@ -220,8 +220,6 @@ public class GoldenVectorTest {
   }
 
   private static void assertGolden(String name, C509CborItem item) throws CodecException {
-    System.out.println("is: " + Hex.encode(item.getEncoded())); // TODO
-    System.out.println("ex: " + Hex.encode(GoldenVectors.get(name)));
     Assert.assertEquals(name, Hex.encode(GoldenVectors.get(name)),
         Hex.encode(item.getEncoded()));
   }
@@ -237,8 +235,9 @@ public class GoldenVectorTest {
         C509GeneralName.ip(fill(4, 0x11)),
         C509GeneralName.macAddress(fill(6, 0x12)),
         C509GeneralName.otherName(new C509OtherName(C509ObjectId.of("1.2.3.4"), fill(10, 0x22))),
-        C509GeneralName.hardwareModuleName(new C509OtherName(C509ObjectId.of("1.2.3.5"), fill(HashedIdLength,
-            0x33))));
+        C509GeneralName.hardwareModuleName(
+            new C509OtherName(C509ObjectId.of("1.2.3.5"),
+                fill(HashedIdLength, 0x33))));
 
     C509IPAddressFamily v4 = new C509IPAddressFamily(C509IPAddressFamily.AFI_IPV4, null, List.of(
         C509IPAddressOrRange.prefix(new C509IpBits(0, new byte[] {10, 0})),
@@ -409,8 +408,8 @@ public class GoldenVectorTest {
 
     assertGolden("crlInfo",
         new C509CRLInfo(new C509CRLInfoData(ConstSignatureAlgorithm.ecdsa_with_SHA256,
-        C509NameVariant.ofC509(ca.subject()), fill(HashedIdLength, 7), 11, T0, T0.plusSeconds(7200), 10L,
-        null)));
+        C509NameVariant.ofC509(ca.subject()), fill(HashedIdLength, 7), 11,
+            T0, T0.plusSeconds(7200), 10L, null)));
   }
 
   @Test

@@ -774,7 +774,8 @@ public class GenerateCerts {
             if (caKeyCertPair == null) {
               throw new InvalidConfException("unknown CA " + keyCertConf.issuerName());
             }
-            Signer signer = KeyUtil.getSigner(caKeyCertPair.key(), caKeyCertPair.cert().publicKey());
+            Signer signer = KeyUtil.getSigner(caKeyCertPair.key(),
+                              caKeyCertPair.cert().publicKey());
             keyStoreAndCert = generateC509Certificate(certType, signer.contentSigner(),
                 caKeyCertPair.cert().c509, keyPair.getPrivate(), subjectPublicKeyInfo, genParams,
                 subject, validity);
@@ -793,7 +794,6 @@ public class GenerateCerts {
           X500Name subject = new X500Name(entry.subject);
           String certType = entry.certType;
 
-
           if (keyCertConf.issuerName() == null) {
             Signer signer = KeyUtil.getSigner(keyPair.getPrivate(), keyPair.getPublic(), true);
 
@@ -805,7 +805,8 @@ public class GenerateCerts {
             if (caKeyCertPair == null) {
               throw new InvalidConfException("unknown CA " + keyCertConf.issuerName());
             }
-            Signer signer = KeyUtil.getSigner(caKeyCertPair.key(), caKeyCertPair.cert().publicKey());
+            Signer signer = KeyUtil.getSigner(caKeyCertPair.key(),
+                              caKeyCertPair.cert().publicKey());
             keyStoreAndCert = generateX509Certificate(certType, signer.contentSigner(),
                 caKeyCertPair.cert().x509, keyPair.getPrivate(), subjectPublicKeyInfo, genParams,
                 subject, validity);
@@ -1025,7 +1026,6 @@ public class GenerateCerts {
 
     return new KeyStoreAndCert(ksStream.toByteArray(), new CertChoice(new X509Cert(cert)));
   }
-
 
   private static KeyStoreAndCert generateC509Certificate(
       String certType, ContentSigner signer, C509Cert issuerCert, PrivateKey privateKey,

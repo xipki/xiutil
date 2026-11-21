@@ -480,7 +480,6 @@ public final class C509Dumper extends CborDiag {
     }
   }
 
-
   private void dumpRdnValue(int level, String label) throws CodecException {
     CborType type = peekType();
     if (type.isTextString()) {
@@ -705,7 +704,8 @@ public final class C509Dumper extends CborDiag {
       Counter qc = new Counter();
       for (int j = 0; j < q; j++) {
         printNoContentLine(level + 2, "PolicyQualifierInfo[" + j + "]");
-        dumpCode(level + 2, intNamer(ConstPolicyQualifier::name), qc.label("policyQualifierId"), "");
+        dumpCode(level + 2, intNamer(ConstPolicyQualifier::name),
+            qc.label("policyQualifierId"), "");
         printTextString(level + 2, qc.label("qualifier"));
       }
     }

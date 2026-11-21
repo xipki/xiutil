@@ -123,7 +123,6 @@ public class C509Name extends CborEncodable {
     return ret;
   }
 
-
   public C509RdnAttribute getFirstAttribute(long attributeType) {
     for (C509RdnAttribute m : attributes) {
       if (m.attributeType() == attributeType) {

@@ -12,7 +12,6 @@ import org.xipki.codec.cbor.CborEncoder;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.util.Args;
 
-
 /**
  * The subject / issuer alternative name extension. A single DNS name is encoded as a bare
  * text string.

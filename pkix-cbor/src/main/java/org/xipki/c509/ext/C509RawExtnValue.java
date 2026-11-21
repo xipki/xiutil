@@ -11,7 +11,6 @@ import org.xipki.codec.cbor.CborMap;
 import org.xipki.codec.exception.CodecException;
 import org.xipki.codec.util.Args;
 
-
 /**
  * The value of an extension without a dedicated class, kept as {@link CborEncodedItem}.
  *
