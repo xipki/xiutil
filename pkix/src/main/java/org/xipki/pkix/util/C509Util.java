@@ -164,7 +164,8 @@ public class C509Util {
 
   public static C509Cert parseCert(byte[] bytes) throws CertificateEncodingException {
     byte[] certBytes = null;
-    if (CompareUtil.areEqual(notNull(bytes, "bytes"), 0, BEGIN_PEM, 0, BEGIN_PEM.length)) {
+    if (notNull(bytes, "bytes").length >= BEGIN_PEM.length
+        && CompareUtil.areEqual(bytes, 0, BEGIN_PEM, 0, BEGIN_PEM.length)) {
       try (PemReader r = new PemReader(new InputStreamReader(
           new ByteArrayInputStream(bytes), StandardCharsets.UTF_8))) {
         PemObject obj;

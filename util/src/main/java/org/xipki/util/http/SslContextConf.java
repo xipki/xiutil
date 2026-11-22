@@ -129,7 +129,8 @@ public class SslContextConf {
         int idx = 1;
         for (FileOrBinary fb : sslTrustanchors) {
           byte[] bytes = fb.readContent(basedir);
-          if (CompareUtil.areEqual(bytes, 0, PEM_PREFIX, 0, PEM_PREFIX.length)) {
+          if (bytes.length >= PEM_PREFIX.length
+              && CompareUtil.areEqual(bytes, 0, PEM_PREFIX, 0, PEM_PREFIX.length)) {
             try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(new ByteArrayInputStream(bytes)))) {
               StringBuilder sb = null;
