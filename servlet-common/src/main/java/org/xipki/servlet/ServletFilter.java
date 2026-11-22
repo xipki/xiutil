@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.cert.X509Certificate;
+import java.util.List;
+import java.util.function.Function;
 
 /**
  * Servlet Filter.
@@ -36,11 +38,22 @@ public abstract class ServletFilter implements Filter {
 
   /**
    * Name of the context parameter that specifies the base directory, against which relative
-   * paths in the configuration are resolved. The default is set in the web application's
-   * {@code web.xml} ({@code ${catalina.base}/xipki}) and can be overridden in Tomcat's
-   * {@code conf/context.xml} with {@code <Parameter ... override="false"/>}.
+   * paths in the configuration are resolved. The default {@code xipki} is set in the web
+   * application's {@code web.xml}. A relative value is resolved against the base directory of
+   * the servlet container, see {@link #CONTAINER_BASE_PROPERTIES}. The value can be overridden
+   * in the container, e.g. in Tomcat's {@code conf/context.xml} with
+   * {@code <Parameter ... override="false"/>}.
    */
   public static final String PARAM_BASEDIR = "xipki.basedir";
+
+  /**
+   * System properties holding the base directory of the servlet container, in the order they
+   * are tried: {@code catalina.base} (Tomcat, TomEE), {@code jetty.base} (Jetty),
+   * {@code jboss.server.base.dir} (WildFly, JBoss EAP) and {@code com.sun.aas.instanceRoot}
+   * (GlassFish, Payara).
+   */
+  static final List<String> CONTAINER_BASE_PROPERTIES = List.of(
+      "catalina.base", "jetty.base", "jboss.server.base.dir", "com.sun.aas.instanceRoot");
 
   private XiHttpFilter filter0;
 
@@ -71,20 +84,57 @@ public abstract class ServletFilter implements Filter {
   }
 
   private static String getBasedir(FilterConfig filterConfig) throws ServletException {
-    String str = filterConfig.getServletContext().getInitParameter(PARAM_BASEDIR);
-    if (str == null || str.isBlank()) {
+    return resolveBasedir(filterConfig.getServletContext().getInitParameter(PARAM_BASEDIR),
+        System::getProperty);
+  }
+
+  /**
+   * Resolves the value of the context parameter {@link #PARAM_BASEDIR}. A relative value is
+   * resolved against the base directory of the servlet container, never against the working
+   * directory.
+   *
+   * @param value the value of the context parameter.
+   * @param systemProperties returns the value of a system property, or {@code null}.
+   * @return the canonical path of the base directory.
+   * @throws ServletException if the value is not set, contains an unresolved placeholder, is
+   *         relative in an unknown servlet container, or is not an existing directory.
+   */
+  static String resolveBasedir(String value, Function<String, String> systemProperties)
+      throws ServletException {
+    if (value == null || value.isBlank()) {
       throw new ServletException("context parameter " + PARAM_BASEDIR + " is not set");
     }
 
-    File dir = new File(str.trim());
-    if (!dir.isAbsolute()) {
+    String str = value.trim();
+    if (str.contains("${")) {
+      // e.g. ${catalina.base}/xipki in a container that does not replace placeholders
       throw new ServletException("context parameter " + PARAM_BASEDIR
-          + " is not an absolute path: " + str);
+          + " contains an unresolved placeholder: " + str
+          + "; use an absolute path, or a path relative to the container's base directory");
+    }
+
+    File dir = new File(str);
+    if (!dir.isAbsolute()) {
+      String containerBase = null;
+      for (String name : CONTAINER_BASE_PROPERTIES) {
+        String prop = systemProperties.apply(name);
+        if (prop != null && !prop.isBlank()) {
+          containerBase = prop.trim();
+          break;
+        }
+      }
+
+      if (containerBase == null) {
+        throw new ServletException("context parameter " + PARAM_BASEDIR + " is relative ("
+            + str + "), but the servlet container is unknown (none of the system properties "
+            + String.join(", ", CONTAINER_BASE_PROPERTIES) + " is set); use an absolute path");
+      }
+      dir = new File(containerBase, str);
     }
 
     if (!dir.isDirectory()) {
       throw new ServletException("context parameter " + PARAM_BASEDIR
-          + " is not an existing directory: " + str);
+          + " is not an existing directory: " + dir.getPath());
     }
 
     String basedir;
