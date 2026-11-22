@@ -29,6 +29,7 @@ import org.xipki.pkix.sign.ConcurrentSigner;
 import org.xipki.pkix.sign.CsrControl;
 import org.xipki.pkix.sign.SignerConf;
 import org.xipki.pkix.sign.SignerFactoryRegister;
+import org.xipki.pkix.sign.XDHContentVerifierFactory;
 import org.xipki.pkix.util.KeyUtil;
 import org.xipki.pkix.sign.AlgorithmValidator;
 import org.xipki.util.misc.LogUtil;
@@ -250,7 +251,17 @@ public class SecurityFactoryImpl implements SecurityFactory {
 
     try {
       PublicKey pk = KeyInfoUtil.getPublicKey(pkInfo);
-      ContentVerifierFactory cvp = getContentVerifierFactory(pk, ownerKeyAndCert, ownerMasterKey);
+      ContentVerifierFactory cvp;
+      if (ConstSignatureAlgorithm.isStaticDhSignature(algId)) {
+        // sa-ecdhPop-*: the key is an EC key, which is not specific to DH PoP
+        if (ownerKeyAndCert == null) {
+          LOG.error("could not validate POP of CSR: ownerKeyAndCert is required but absent");
+          return false;
+        }
+        cvp = new XDHContentVerifierFactory(pk, ownerKeyAndCert);
+      } else {
+        cvp = getContentVerifierFactory(pk, ownerKeyAndCert, ownerMasterKey);
+      }
       return csr.verify(cvp);
     } catch (InvalidKeyException | InvalidKeySpecException | SignatureException ex) {
       LogUtil.error(LOG, ex, "could not validate POP of CSR");

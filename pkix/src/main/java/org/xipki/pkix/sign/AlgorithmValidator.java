@@ -5,6 +5,7 @@ package org.xipki.pkix.sign;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xipki.codec.c509.id.ConstSignatureAlgorithm;
 import org.xipki.codec.x509.AlgorithmIdentifier;
 import org.xipki.codec.util.Args;
 import org.xipki.crypto.core.HashAlgo;
@@ -92,8 +93,13 @@ public class AlgorithmValidator {
     return algos.contains(Args.notNull(algo, "algo"));
   }
 
+  /**
+   * Returns whether the C509 signature algorithm is permitted. The static DH proof-of-possession
+   * algorithms sa-ecdhPop-sha*-hmac-sha* (SHA-2 only) have no {@link SignAlgo} and are always
+   * permitted.
+   */
   public boolean isC509AlgorithmPermitted(int c509AlgId) {
-    if (algos.isEmpty()) {
+    if (algos.isEmpty() || ConstSignatureAlgorithm.isStaticDhSignature(c509AlgId)) {
       return true;
     }
 
