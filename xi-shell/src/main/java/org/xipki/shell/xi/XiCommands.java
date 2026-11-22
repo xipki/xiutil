@@ -22,14 +22,24 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
+import java.security.cert.X509Certificate;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -688,6 +698,128 @@ class XiCommands {
         out.printf("%5d  %s%n", entry.index() + 1, entry.line());
       }
       out.flush();
+    }
+  }
+
+  @Command(name = "wait-server", description = "wait until a server answers on a TCP port, "
+      + "or with --stopped until the port is closed", mixinStandardHelpOptions = true)
+  static class WaitServer extends ShellBaseCommand {
+
+    private static final int PROBE_TIMEOUT_MS = 2000;
+
+    private static final long RETRY_INTERVAL_MS = 250;
+
+    @Parameters(index = "0", description = "TCP port")
+    private int port;
+
+    @Option(names = "--host", description = "host name or IP address")
+    private String host = "localhost";
+
+    @Option(names = "--tls", description = "probe with a TLS handshake instead of an HTTP request")
+    private boolean tls;
+
+    @Option(names = "--stopped", description = "wait until the port is closed")
+    private boolean stopped;
+
+    @Option(names = "--timeout", description = "maximal time to wait in seconds")
+    private int timeout = 60;
+
+    @Override
+    public void run() {
+      if (port < 1 || port > 65535) {
+        throw new IllegalArgumentException("invalid port " + port);
+      }
+
+      long start = System.currentTimeMillis();
+      long deadline = start + timeout * 1000L;
+      String target = host + ":" + port;
+      while (true) {
+        boolean reached = stopped ? !isPortOpen() : isServerUp();
+        if (reached) {
+          println(String.format(Locale.ROOT, "server %s is %s after %.1f seconds", target,
+              stopped ? "stopped" : "up", (System.currentTimeMillis() - start) / 1000.0));
+          return;
+        }
+
+        if (System.currentTimeMillis() >= deadline) {
+          throw new RuntimeException("server " + target + " is not "
+              + (stopped ? "stopped" : "up") + " after " + timeout + " seconds");
+        }
+
+        try {
+          Thread.sleep(RETRY_INTERVAL_MS);
+        } catch (InterruptedException ex) {
+          Thread.currentThread().interrupt();
+          throw new RuntimeException("wait-server interrupted", ex);
+        }
+      }
+    }
+
+    private boolean isPortOpen() {
+      try (Socket socket = new Socket()) {
+        socket.connect(new InetSocketAddress(host, port), PROBE_TIMEOUT_MS);
+        return true;
+      } catch (IOException ex) {
+        return false;
+      }
+    }
+
+    /**
+     * A server that has opened its port but not yet started to accept connections (e.g. Tomcat
+     * while deploying the web applications) does not answer, so an open port is not enough.
+     */
+    private boolean isServerUp() {
+      try (Socket socket = new Socket()) {
+        socket.connect(new InetSocketAddress(host, port), PROBE_TIMEOUT_MS);
+        socket.setSoTimeout(PROBE_TIMEOUT_MS);
+        if (tls) {
+          SSLSocket sslSocket = (SSLSocket) trustAllContext().getSocketFactory()
+              .createSocket(socket, host, port, true);
+          try (sslSocket) {
+            sslSocket.startHandshake();
+          } catch (SocketTimeoutException ex) {
+            return false;
+          } catch (IOException ex) {
+            // the server answered, e.g. with an alert because no client certificate was sent
+            return true;
+          }
+        } else {
+          socket.getOutputStream().write(("HEAD / HTTP/1.0\r\nHost: " + host + "\r\n\r\n")
+              .getBytes(StandardCharsets.US_ASCII));
+          socket.getOutputStream().flush();
+          // -1: the server closed the connection, so it is up, too.
+          socket.getInputStream().read();
+        }
+        return true;
+      } catch (IOException ex) {
+        return false;
+      }
+    }
+
+    private static SSLContext trustAllContext() throws IOException {
+      // only used to detect whether the server answers, no data is exchanged.
+      TrustManager trustAll = new X509TrustManager() {
+        @Override
+        public void checkClientTrusted(X509Certificate[] chain, String authType) {
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType) {
+        }
+
+        @Override
+        public X509Certificate[] getAcceptedIssuers() {
+          return new X509Certificate[0];
+        }
+      };
+
+      try {
+        SSLContext context = SSLContext.getInstance("TLS");
+        context.init(null, new TrustManager[] {trustAll}, null);
+        return context;
+      } catch (GeneralSecurityException ex) {
+        throw new IOException("could not initialize TLS: " + ex.getMessage(), ex);
+      }
     }
   }
 
