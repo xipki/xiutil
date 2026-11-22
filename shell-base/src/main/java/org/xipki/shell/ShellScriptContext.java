@@ -93,9 +93,17 @@ final class ShellScriptContext implements ShellVariableSupport.Resolver {
   }
 
   boolean isTrue(String name) {
+    return isTrue(name, false);
+  }
+
+  /**
+   * Returns whether the variable is "true" (case-insensitive), or the default value if the
+   * variable is not set.
+   */
+  boolean isTrue(String name, boolean defaultValue) {
     Object value = variables.get(name);
     if (value == null) {
-      return false;
+      return defaultValue;
     }
     return "true".equalsIgnoreCase(String.valueOf(value).trim());
   }

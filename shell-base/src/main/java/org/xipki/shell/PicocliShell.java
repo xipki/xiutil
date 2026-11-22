@@ -227,7 +227,7 @@ public class PicocliShell {
     }
 
     try {
-      LOG.debug("interactive command: {}", trimmed);
+      LOG.debug("interactive command: {}", SourceCommand.maskPasswords(trimmed));
       String expandedLine = expandText(trimmed, interactiveContext);
       ParsedLine parsedLine = parser.parse(protectEscapedDollarForParser(expandedLine), 0);
       String[] args = parsedLine.words().toArray(String[]::new);
@@ -239,7 +239,7 @@ public class PicocliShell {
     } catch (Exception | LinkageError ex) {
       // LinkageError, e.g. NoClassDefFoundError of a missing optional jar, is not handled by
       // picocli. It must not terminate the shell. Other errors are not caught.
-      LOG.error("command failed: {}", trimmed, ex);
+      LOG.error("command failed: {}", SourceCommand.maskPasswords(trimmed), ex);
       ex.printStackTrace(out);
       out.flush();
       return 1;
@@ -247,7 +247,7 @@ public class PicocliShell {
   }
 
   private int handleParameterException(ParameterException ex, String[] args) {
-    LOG.error("command failed: {}", String.join(" ", args), ex);
+    LOG.error("command failed: {}", SourceCommand.maskPasswords(String.join(" ", args)), ex);
     ex.printStackTrace(ex.getCommandLine().getErr());
     ex.getCommandLine().getErr().flush();
     return ex.getCommandLine().getCommandSpec().exitCodeOnInvalidInput();

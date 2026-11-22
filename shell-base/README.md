@@ -163,7 +163,8 @@ hello --name ${NAME} \
   `lt`, `le`. Combine alternatives with `or` or `|`.
 - **Command substitution**: `$(command)` is replaced with the command's output.
 - **Line continuation**: a trailing `\` joins the next line.
-- **Tracing**: `set SCRIPT_TRACE true` prints each command before it runs.
+- **Tracing**: each command is printed before it runs. `set SCRIPT_TRACE false` turns this
+  off, `set SCRIPT_TRACE true` on again.
 - Commands that are not shell commands are run as external processes, with the script's
   directory as the working directory.
 - A script that sources itself, directly or indirectly, is rejected.

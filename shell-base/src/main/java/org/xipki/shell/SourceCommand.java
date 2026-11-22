@@ -19,6 +19,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.regex.Pattern;
 
 /**
  * Action that executes commands from a script file.
@@ -31,7 +32,19 @@ class SourceCommand implements Callable<Integer> {
 
   private static final Logger LOG = LoggerFactory.getLogger(SourceCommand.class);
 
+  /**
+   * Each command of a script is printed before it runs, unless this variable is set to a value
+   * other than "true", e.g. {@code set SCRIPT_TRACE false}.
+   */
   private static final String SCRIPT_TRACE_VARIABLE = "SCRIPT_TRACE";
+
+  /**
+   * Option whose name contains "password" or "pwd" (except *-file), followed by its value,
+   * separated by "=" or whitespace. The value may be quoted.
+   */
+  private static final Pattern PASSWORD_OPTION = Pattern.compile(
+      "(?i)(--(?![a-z0-9-]*-file(?![a-z0-9-]))[a-z0-9-]*(?:password|pwd)[a-z0-9-]*)(=|\\s+)"
+          + "(\"(?:[^\"\\\\]|\\\\.)*\"|'[^']*'|[^\\s]+)");
 
   private static final LoopContinueSignal LOOP_CONTINUE_SIGNAL = new LoopContinueSignal();
 
@@ -118,7 +131,7 @@ class SourceCommand implements Callable<Integer> {
       }
 
       if (trimmed.startsWith("if ")) {
-        LOG.debug("script command: {}", trimmed);
+        LOG.debug("script command: {}", maskPasswords(trimmed));
         printScriptCommand(trimmed, context);
         int end = findMatchingFi(lines, i);
         executeIfBlock(lines.subList(i, end + 1), context);
@@ -127,7 +140,7 @@ class SourceCommand implements Callable<Integer> {
       }
 
       if (trimmed.startsWith("for ")) {
-        LOG.debug("script command: {}", trimmed);
+        LOG.debug("script command: {}", maskPasswords(trimmed));
         printScriptCommand(trimmed, context);
         int end = findMatchingDone(lines, i);
         executeForBlock(lines.subList(i, end + 1), context);
@@ -135,14 +148,14 @@ class SourceCommand implements Callable<Integer> {
         continue;
       }
 
-      LOG.debug("script command: {}", trimmed);
+      LOG.debug("script command: {}", maskPasswords(trimmed));
       printScriptCommand(trimmed, context);
       executeScriptStatement(trimmed, context);
     }
   }
 
   private void printScriptCommand(String command, ShellScriptContext context) {
-    if (!context.isTrue(SCRIPT_TRACE_VARIABLE)) {
+    if (!context.isTrue(SCRIPT_TRACE_VARIABLE, true)) {
       return;
     }
 
@@ -152,7 +165,18 @@ class SourceCommand implements Callable<Integer> {
 
   private static String formatDisplayedCommand(String command) {
     // Style the original text instead of the parsed words, so that quotes are kept.
-    return ShellCommandStyler.formatAnsi(command);
+    return ShellCommandStyler.formatAnsi(maskPasswords(command));
+  }
+
+  /**
+   * Replaces the values of password options with {@code ****}, so that the passwords are not
+   * printed in the script trace.
+   *
+   * @param command the command.
+   * @return the command with masked passwords.
+   */
+  static String maskPasswords(String command) {
+    return PASSWORD_OPTION.matcher(command).replaceAll("$1$2****");
   }
 
   private void executeIfBlock(List<String> blockLines, ShellScriptContext context) {

@@ -215,6 +215,67 @@ public class PicocliShellBaseCommandTest {
   }
 
   @Test
+  public void testScriptTraceIsOnByDefault() throws Exception {
+    Path dir = Files.createTempDirectory("xipki-source-trace-default-");
+    Path script = dir.resolve("trace.script");
+    Files.writeString(script, "echo hello" + System.lineSeparator());
+
+    TestShell shell = new TestShell(true);
+    Assert.assertEquals(0, shell.executeScript(script.toString()));
+    List<String> lines = shell.outputLines();
+    Assert.assertEquals(lines.toString(), 2, lines.size());
+    Assert.assertTrue(lines.get(0), lines.get(0).contains("echo"));
+    Assert.assertEquals("hello", lines.get(1));
+  }
+
+  @Test
+  public void testScriptTraceCanBeTurnedOff() throws Exception {
+    Path dir = Files.createTempDirectory("xipki-source-trace-off-");
+    Path script = dir.resolve("trace-off.script");
+    Files.writeString(script, String.join(System.lineSeparator(),
+        "set SCRIPT_TRACE false",
+        "echo hello") + System.lineSeparator());
+
+    TestShell shell = new TestShell(true);
+    Assert.assertEquals(0, shell.executeScript(script.toString()));
+    // only the set statement itself is traced
+    List<String> lines = shell.outputLines();
+    Assert.assertEquals(lines.toString(), 2, lines.size());
+    Assert.assertTrue(lines.get(0), lines.get(0).contains("SCRIPT_TRACE"));
+    Assert.assertEquals("hello", lines.get(1));
+  }
+
+  @Test
+  public void testMaskPasswordsInScriptTrace() {
+    Assert.assertEquals(
+        "csr-p12 --p12 a.p12 --password **** --subject \"C=DE,CN=x\" --out a.csr",
+        SourceCommand.maskPasswords(
+            "csr-p12 --p12 a.p12 --password CHANGEIT --subject \"C=DE,CN=x\" --out a.csr"));
+    Assert.assertEquals("x --signer-password=**** --challenge-password ****",
+        SourceCommand.maskPasswords("x --signer-password=1234 --challenge-password \"a b\""));
+    Assert.assertEquals("x --inpwd **** --outpwd **** --KEY-PASSWORD ****",
+        SourceCommand.maskPasswords("x --inpwd ${PWD1} --outpwd 'x y' --KEY-PASSWORD s"));
+    // the value of --password-file is a path, not a password
+    Assert.assertEquals("x --password-file pwd.txt --pwd ****",
+        SourceCommand.maskPasswords("x --password-file pwd.txt --pwd s"));
+  }
+
+  @Test
+  public void testScriptTraceMasksPasswords() throws Exception {
+    Path dir = Files.createTempDirectory("xipki-source-trace-mask-");
+    Path script = dir.resolve("trace-mask.script");
+    Files.writeString(script, "echo --password CHANGEIT" + System.lineSeparator());
+
+    TestShell shell = new TestShell(true);
+    Assert.assertEquals(0, shell.executeScript(script.toString()));
+    List<String> lines = shell.outputLines();
+    Assert.assertEquals(lines.toString(), 2, lines.size());
+    Assert.assertFalse(lines.get(0), lines.get(0).contains("CHANGEIT"));
+    Assert.assertTrue(lines.get(0), lines.get(0).contains("****"));
+    Assert.assertEquals("--password CHANGEIT", lines.get(1));
+  }
+
+  @Test
   public void testContinueSkipsRestOfIteration() throws Exception {
     Path dir = Files.createTempDirectory("xipki-source-continue-");
     Path script = dir.resolve("for-continue.script");
@@ -426,8 +487,19 @@ public class PicocliShellBaseCommandTest {
 
     private final StringWriter error;
 
+    /**
+     * Creates a shell without script tracing, so that the output contains only what the
+     * commands print.
+     */
     TestShell() {
+      this(false);
+    }
+
+    TestShell(boolean defaultTrace) {
       this(new StringWriter(), new StringWriter());
+      if (!defaultTrace) {
+        interactiveContext().set("SCRIPT_TRACE", "false");
+      }
     }
 
     private TestShell(StringWriter output, StringWriter error) {
