@@ -67,7 +67,7 @@ public final class C509RDNAttributeTemplate extends C509CborItem {
   }
 
   static C509RDNAttributeTemplate read(CborDecoder in) throws CodecException {
-    int type = in.readInt();
+    long type = in.readLong();
     int min = in.readInt();
     int max = in.readInt();
     return new C509RDNAttributeTemplate(

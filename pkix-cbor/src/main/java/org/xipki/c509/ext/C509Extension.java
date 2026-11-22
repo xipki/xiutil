@@ -148,7 +148,7 @@ public final class C509Extension extends C509CborItem implements Comparable<C509
   }
 
   public static C509Extension read(CborDecoder in) throws CodecException {
-    long signedId = in.readInt();
+    long signedId = in.readLong();
     long id = Math.abs(signedId);
     return new C509Extension(id, signedId < 0, C509ExtnCatalog.INSTANCE.read(id, in));
   }

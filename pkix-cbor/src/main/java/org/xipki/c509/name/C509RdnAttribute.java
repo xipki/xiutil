@@ -68,7 +68,7 @@ public class C509RdnAttribute extends CborEncodable {
   }
 
   public static C509RdnAttribute read(CborDecoder decoder) throws CodecException {
-    int attributeType = decoder.readInt();
+    long attributeType = decoder.readLong();
     return new C509RdnAttribute(attributeType, SpecialText.read(decoder));
   }
 

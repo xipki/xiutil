@@ -68,7 +68,7 @@ public final class C509ExtensionTemplate extends C509CborItem {
   }
 
   static C509ExtensionTemplate read(CborDecoder in) throws CodecException {
-    long id = Math.abs(in.readInt());
+    long id = Math.abs(in.readLong());
     boolean optional = in.readBoolean();
     if (in.peekType().isUndefined()) {
       in.readUndefined();
