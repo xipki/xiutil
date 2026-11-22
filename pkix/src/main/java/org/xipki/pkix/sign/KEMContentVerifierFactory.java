@@ -120,7 +120,7 @@ public class KEMContentVerifierFactory implements ContentVerifierFactory {
 
   @Override
   public ContentVerifier getForC509(int verifierAlgorithmIdentifier) throws GenerationException {
-    if (ConstSignatureAlgorithm.SIG_KEM_GMAC_256 != verifierAlgorithmIdentifier) {
+    if (ConstSignatureAlgorithm.SIG_KEM_HMAC_SHA256 != verifierAlgorithmIdentifier) {
       throw new GenerationException("unsupported verifierAlgorithmIdentifier "
           + ConstSignatureAlgorithm.describe(verifierAlgorithmIdentifier));
     }

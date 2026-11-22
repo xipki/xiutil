@@ -252,7 +252,7 @@ public class SecurityFactoryImpl implements SecurityFactory {
     try {
       PublicKey pk = KeyInfoUtil.getPublicKey(pkInfo);
       ContentVerifierFactory cvp;
-      if (ConstSignatureAlgorithm.isStaticDhSignature(algId)) {
+      if (ConstSignatureAlgorithm.isEcdhPopSignature(algId)) {
         // sa-ecdhPop-*: the key is an EC key, which is not specific to DH PoP
         if (ownerKeyAndCert == null) {
           LOG.error("could not validate POP of CSR: ownerKeyAndCert is required but absent");

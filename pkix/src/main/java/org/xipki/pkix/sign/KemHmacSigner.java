@@ -24,7 +24,7 @@ public class KemHmacSigner implements Signer {
 
   private final static AlgorithmIdentifier ALG_ID =
       new AlgorithmIdentifier(XipkiOIDs.id_alg_KEM_HMAC_SHA256);
-  private final static int C509_ALG_ID = ConstSignatureAlgorithm.SIG_KEM_GMAC_256;
+  private final static int C509_ALG_ID = ConstSignatureAlgorithm.SIG_KEM_HMAC_SHA256;
 
   private static final byte[] ENCODED_ALG_ID = ALG_ID.getEncoded();
 

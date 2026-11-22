@@ -132,8 +132,16 @@ public class DfltConcurrentSigner implements ConcurrentSigner {
     Args.notEmpty(signers, "signers");
 
     this.mac = mac;
-    this.algorithm = SignAlgo.ofAlgorithmIdentifier(
-        signers.get(0).contentSigner().x509Algorithm());
+
+    ContentSigner csigner = signers.get(0).contentSigner();
+    SignAlgo signAlgo = null;
+    try {
+      signAlgo = SignAlgo.ofAlgorithmIdentifier(csigner.x509Algorithm());
+    } catch (Exception e) {
+      signAlgo = SignAlgo.ofC509AlgorithmIdentifier(csigner.c509Algorithm());
+    }
+    this.algorithm = signAlgo;
+
     this.signers = new ArrayBlockingQueue<>(signers.size());
     this.signers.addAll(signers);
 

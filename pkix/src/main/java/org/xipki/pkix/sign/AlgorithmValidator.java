@@ -99,7 +99,7 @@ public class AlgorithmValidator {
    * permitted.
    */
   public boolean isC509AlgorithmPermitted(int c509AlgId) {
-    if (algos.isEmpty() || ConstSignatureAlgorithm.isStaticDhSignature(c509AlgId)) {
+    if (algos.isEmpty() || ConstSignatureAlgorithm.isEcdhPopSignature(c509AlgId)) {
       return true;
     }
 
