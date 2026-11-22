@@ -215,6 +215,77 @@ public class PicocliShellBaseCommandTest {
   }
 
   @Test
+  public void testContinueSkipsRestOfIteration() throws Exception {
+    Path dir = Files.createTempDirectory("xipki-source-continue-");
+    Path script = dir.resolve("for-continue.script");
+    Files.writeString(script, String.join(System.lineSeparator(),
+        "for i in a b c",
+        "  if ${i} eq b",
+        "    continue",
+        "  fi",
+        "  echo ${i}",
+        "done",
+        "echo after-for") + System.lineSeparator());
+
+    TestShell shell = new TestShell();
+    Assert.assertEquals(0, shell.executeScript(script.toString()));
+    Assert.assertEquals(List.of("a", "c", "after-for"), shell.outputLines());
+  }
+
+  @Test
+  public void testContinueAffectsInnermostLoop() throws Exception {
+    Path dir = Files.createTempDirectory("xipki-source-continue-nested-");
+    Path script = dir.resolve("for-continue-nested.script");
+    Files.writeString(script, String.join(System.lineSeparator(),
+        "for i in a b",
+        "  for j in 1 2",
+        "    if ${j} eq 1",
+        "      continue",
+        "    fi",
+        "    echo ${i}${j}",
+        "  done",
+        "  echo ${i}",
+        "done") + System.lineSeparator());
+
+    TestShell shell = new TestShell();
+    Assert.assertEquals(0, shell.executeScript(script.toString()));
+    Assert.assertEquals(List.of("a2", "a", "b2", "b"), shell.outputLines());
+  }
+
+  @Test
+  public void testContinueOutsideLoopFails() throws Exception {
+    Path dir = Files.createTempDirectory("xipki-source-continue-outside-");
+    Path script = dir.resolve("continue-outside.script");
+    Files.writeString(script, String.join(System.lineSeparator(),
+        "echo before",
+        "continue",
+        "echo after") + System.lineSeparator());
+
+    TestShell shell = new TestShell();
+    RuntimeException ex = Assert.assertThrows(RuntimeException.class,
+        () -> shell.executeScript(script.toString()));
+    Assert.assertTrue(ex.getMessage(), ex.getMessage().contains("inside a for loop"));
+    Assert.assertFalse(shell.outputLines().contains("after"));
+  }
+
+  @Test
+  public void testContinueDoesNotReachLoopOfCallingScript() throws Exception {
+    Path dir = Files.createTempDirectory("xipki-source-continue-sourced-");
+    Path inner = dir.resolve("inner.script");
+    Files.writeString(inner, "continue" + System.lineSeparator());
+    Path outer = dir.resolve("outer.script");
+    Files.writeString(outer, String.join(System.lineSeparator(),
+        "for i in a b",
+        "  source " + inner,
+        "  echo ${i}",
+        "done") + System.lineSeparator());
+
+    TestShell shell = new TestShell();
+    Assert.assertThrows(RuntimeException.class, () -> shell.executeScript(outer.toString()));
+    Assert.assertFalse(shell.outputLines().contains("a"));
+  }
+
+  @Test
   public void testExitStillStopsShellAndReturnOutsideScriptFailsCleanly() throws Exception {
     TestShell shell = new TestShell();
 

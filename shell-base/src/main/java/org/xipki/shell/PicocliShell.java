@@ -90,6 +90,7 @@ public class PicocliShell {
     this.commandLine.addSubcommand("clear", new ClearCommand(this));
     this.commandLine.addSubcommand("java-version", new JavaVersionCommand());
     this.commandLine.addSubcommand("return", new ReturnCommand(this));
+    this.commandLine.addSubcommand("continue", new ContinueCommand(this));
     this.commandLine.addSubcommand("exit", new ExitCommand(this));
     this.commandLine.addSubcommand("quit", new ExitCommand(this));
     this.commandLine.setParameterExceptionHandler(this::handleParameterException);
@@ -614,6 +615,28 @@ public class PicocliShell {
       }
 
       throw SCRIPT_RETURN_SIGNAL;
+    }
+  }
+
+  /**
+   * In a script, continue is handled by the script executor; this command is only reached when
+   * continue is entered interactively.
+   */
+  @Command(name = "continue",
+      description = "Continue with the next iteration of the innermost for loop of a script",
+      mixinStandardHelpOptions = true)
+  static class ContinueCommand implements Runnable {
+
+    private final PicocliShell shell;
+
+    ContinueCommand(PicocliShell shell) {
+      this.shell = shell;
+    }
+
+    @Override
+    public void run() {
+      throw new CommandLine.ParameterException(shell.commandLine,
+          "continue can only be used inside a for loop of a script");
     }
   }
 

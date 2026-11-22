@@ -33,9 +33,17 @@ class SourceCommand implements Callable<Integer> {
 
   private static final String SCRIPT_TRACE_VARIABLE = "SCRIPT_TRACE";
 
+  private static final LoopContinueSignal LOOP_CONTINUE_SIGNAL = new LoopContinueSignal();
+
   private final PicocliShell shell;
 
   private final Set<Path> executingScripts = new LinkedHashSet<>();
+
+  /**
+   * Number of the enclosing for loops in the script being executed. A sourced script starts
+   * with 0, so continue does not reach a loop of the calling script.
+   */
+  private int loopDepth;
 
   @Parameters(index = "0", description = "script file")
   @Completion(FilePathCompleter.class)
@@ -79,6 +87,8 @@ class SourceCommand implements Callable<Integer> {
       throw new IllegalArgumentException("recursive source detected: " + normalized);
     }
 
+    int callerLoopDepth = loopDepth;
+    loopDepth = 0;
     try {
       LOG.debug("enter script: {}", normalized);
       List<String> lines = mergeContinuedLines(Files.readAllLines(normalized));
@@ -95,6 +105,7 @@ class SourceCommand implements Callable<Integer> {
     } finally {
       LOG.debug("leave script: {}", normalized);
       executingScripts.remove(normalized);
+      loopDepth = callerLoopDepth;
     }
   }
 
@@ -202,9 +213,18 @@ class SourceCommand implements Callable<Integer> {
     String varName = tokens.get(1);
     List<String> values = new ArrayList<>(tokens.subList(3, tokens.size()));
     List<String> body = blockLines.subList(1, blockLines.size() - 1);
-    for (String value : values) {
-      context.set(varName, value);
-      executeScriptLines(body, context);
+    loopDepth++;
+    try {
+      for (String value : values) {
+        context.set(varName, value);
+        try {
+          executeScriptLines(body, context);
+        } catch (LoopContinueSignal ex) {
+          // continue with the next value
+        }
+      }
+    } finally {
+      loopDepth--;
     }
   }
 
@@ -301,6 +321,13 @@ class SourceCommand implements Callable<Integer> {
       return;
     }
 
+    if ("continue".equals(line)) {
+      if (loopDepth == 0) {
+        throw new IllegalArgumentException("continue can only be used inside a for loop");
+      }
+      throw LOOP_CONTINUE_SIGNAL;
+    }
+
     shell.executeCommandLine(line, context, false);
   }
 
@@ -363,6 +390,18 @@ class SourceCommand implements Callable<Integer> {
 
   private static String stripFilePrefix(String target) {
     return target.startsWith("file:") ? target.substring("file:".length()) : target;
+  }
+
+  /**
+   * Thrown by continue to skip the rest of the current iteration of the innermost for loop.
+   */
+  private static final class LoopContinueSignal extends RuntimeException {
+
+    private static final long serialVersionUID = 1L;
+
+    private LoopContinueSignal() {
+      super(null, null, false, false);
+    }
   }
 
 }
