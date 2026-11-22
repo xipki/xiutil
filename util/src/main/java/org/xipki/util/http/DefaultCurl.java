@@ -388,7 +388,7 @@ public class DefaultCurl implements Curl {
       int respCode = httpConn.getResponseCode();
       if (verbose) {
         println("=====response=====");
-        println("  response code: " + respCode + " " + httpConn.getResponseMessage());
+        println("  response code: " + HttpStatusCode.describe(respCode));
         properties = httpConn.getHeaderFields();
         for (Entry<String, List<String>> entry : properties.entrySet()) {
           String key = entry.getKey();
@@ -403,8 +403,7 @@ public class DefaultCurl implements Curl {
         println("=====response content=====");
       } else {
         if (respCode != HttpURLConnection.HTTP_OK) {
-          println("ERROR: bad response: " + httpConn.getResponseCode() + "    "
-              + httpConn.getResponseMessage());
+          println("ERROR: bad response: " + HttpStatusCode.describe(respCode));
         }
       }
 

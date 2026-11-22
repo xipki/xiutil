@@ -360,7 +360,7 @@ class XiCommands {
 
         int statusCode = result.statusCode();
         if (statusCode < HttpStatusCode.SC_OK || statusCode >= 300) {
-          String msg = "received HTTP status code " + statusCode;
+          String msg = "received HTTP status code " + HttpStatusCode.describe(statusCode);
           if (noFail) {
             println("WARN: " + msg);
           } else {
